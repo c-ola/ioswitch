@@ -37,6 +37,20 @@ int connect_to_server(Client client, struct sockaddr_in serv_addr) {
     return 0;
 }
 
+void emit(int fd, int type, int code, int val)
+{
+   struct input_event ie;
+
+   ie.type = type;
+   ie.code = code;
+   ie.value = val;
+   /* timestamp values below are ignored */
+   ie.time.tv_sec = 0;
+   ie.time.tv_usec = 0;
+
+   send(fd, &ie, sizeof(ie), 0);
+}
+
 int main(int argc, char const* argv[]) {
     struct sockaddr_in serv_addr;
     
@@ -54,8 +68,6 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
 
-    int connected = 1;
-    
     // set up for reading from /dev/input/eventX
     struct pollfd fds[1];
     const char* device = argv[1];
@@ -65,12 +77,11 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
     fds[0].events = POLLIN;
-
-
     struct input_event* input_data = malloc(sizeof(struct input_event));
-    int status;
+
+    int status, connected = 1;
     char buffer[1024] = { 0 };
-    
+    printf("started sending...\n");
     while (connected) {
         // timeout should probably be a couple of milliseconds to not block everything
         int ret = poll(fds, 1, -1);
@@ -87,24 +98,11 @@ int main(int argc, char const* argv[]) {
             perror("error reading device\n");
             return -1;
         }
+
         if ((status = send(client.fd, input_data, sizeof(struct input_event), 0)) <= 0) {
             printf("failed to send message\n");
             connected = 0;
         }
-        printf("sent %d bytes\n", (int)r);
-        //status = read(client.fd, buffer, 1024 - 1);
-        //printf("server: %s\n", buffer);
-        /*char in_buf[64];
-        printf("> ");
-        fgets(in_buf, sizeof(in_buf), stdin);
-        if ((status = send(client_fd, in_buf, strlen(in_buf), 0)) <= 0) {
-            printf("failed to send message\n");
-            connected = 0;
-        }
-        printf("sent: %s", in_buf);
-        // get input from client
-        valread = read(client_fd, buffer, 1024 - 1);
-        printf("server: %s\n", buffer);*/
     }
 
     // closing the connected socket
