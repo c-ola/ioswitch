@@ -1,5 +1,6 @@
 #include <asm-generic/socket.h>
 #include <complex.h>
+#include <linux/input.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,12 +76,12 @@ int main(void) {
         perror("accept");
         exit(EXIT_FAILURE);
     }
+
     struct input_event* input_data = malloc(sizeof(struct input_event));
     int running = 1;
     while (running) {
-        valread = read(new_socket, input_data, sizeof(struct input_event));
-        printf("received %d bytes\n", (int)valread);
-        if (input_data->type == EV_KEY) {
+        ssize_t read_bytes = read(new_socket, input_data, sizeof(struct input_event));
+        if (read_bytes == sizeof(struct input_event)) {
             write(uin_fd, input_data, sizeof(struct input_event));
         }
     }
