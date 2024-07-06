@@ -15,6 +15,16 @@
 
 #define PORT 8080
 
+
+typedef struct _server {
+
+} server;
+
+typedef struct ie_packet {
+    int count;
+    struct input_event ie_buf[8];
+} ie_packet;
+
 int main(void) {
 
     struct uinput_setup usetup;
@@ -27,6 +37,14 @@ int main(void) {
     for (int i = 0; i < KEY_KPDOT; i++) {
          ioctl(uin_fd, UI_SET_KEYBIT, i);
     }
+
+    // touchpad not working???
+    ioctl(uin_fd, UI_SET_EVBIT, EV_KEY);
+    ioctl(uin_fd, UI_SET_KEYBIT, BTN_LEFT);
+    ioctl(uin_fd, UI_SET_KEYBIT, BTN_RIGHT);
+    ioctl(uin_fd, UI_SET_EVBIT, EV_REL);
+    ioctl(uin_fd, UI_SET_RELBIT, REL_X);
+    ioctl(uin_fd, UI_SET_RELBIT, REL_Y);
 
     memset(&usetup, 0, sizeof(usetup));
     usetup.id.bustype = BUS_USB;
@@ -77,19 +95,21 @@ int main(void) {
         exit(EXIT_FAILURE);
     }
 
-    struct input_event* input_data = malloc(sizeof(struct input_event));
+    struct ie_packet data;
     int running = 1;
     while (running) {
-        ssize_t read_bytes = read(new_socket, input_data, sizeof(struct input_event));
-        if (read_bytes == sizeof(struct input_event)) {
-            write(uin_fd, input_data, sizeof(struct input_event));
+        ssize_t read_bytes = read(new_socket, &data, sizeof(struct ie_packet));
+        if (read_bytes == sizeof(struct ie_packet)) {
+            for (int i = 0; i < data.count; i++) {
+                write(uin_fd, &data.ie_buf[i], sizeof(struct input_event));
+            }
         }
     }
 
     close(new_socket);
     close(server_fd);
     ioctl(uin_fd, UI_DEV_DESTROY);
-    close(uin_fd);;
+    close(uin_fd);
 
     return 0;
 }
