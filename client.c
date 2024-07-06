@@ -67,7 +67,7 @@ int connect_to_server(Client client, const char *ip, unsigned int port) {
 
 typedef struct ie_packet {
     int count;
-    struct input_event ie_buf[8];
+    struct input_event ie_buf[5];
 } ie_packet;
 
 // Sends an input event from the specified device
@@ -90,13 +90,13 @@ int send_input_event_packet(Client client, dev_reader dr, int device) {
             printf("error somehow\n");
             return -1;
         }
-        ssize_t r = read(pfd.fd, (void *)&ie, sizeof(struct input_event));
+        ssize_t r = read(pfd.fd, (void *)&pkt.ie_buf[pkt.count], sizeof(struct input_event));
         if (r < 0) {
             perror("error reading device");
             return -1;
         }
+        pkt.count++;
         
-        pkt.ie_buf[pkt.count++] = ie;
         if (ie.type == EV_SYN) {
             eop = 1;
         }

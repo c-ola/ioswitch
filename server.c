@@ -22,7 +22,7 @@ typedef struct _server {
 
 typedef struct ie_packet {
     int count;
-    struct input_event ie_buf[8];
+    struct input_event ie_buf[5];
 } ie_packet;
 
 int main(void) {
@@ -99,15 +99,15 @@ int main(void) {
     struct input_event ie = { 0 };
     int running = 1;
     while (running) {
-        /*ssize_t read_bytes = read(new_socket, &data, sizeof(struct ie_packet));
-        if (read_bytes == sizeof(struct ie_packet)) {
+        //ssize_t read_bytes = read(new_socket, &data, sizeof(struct ie_packet));
+        /*if (read_bytes == sizeof(struct ie_packet)) {
             for (int i = 0; i < data.count; i++) {
                 write(uin_fd, &data.ie_buf[i], sizeof(struct input_event));
             }
-        }*/
-        ssize_t read_bytes = read(new_socket, &data, sizeof(struct input_event));
+        //}*/
+        ssize_t read_bytes = read(new_socket, &ie, sizeof(struct input_event));
         if (read_bytes == sizeof(struct input_event)) {
-                write(uin_fd, &ie, sizeof(struct input_event));
+            write(uin_fd, &ie, sizeof(struct input_event));
         }
     }
 
