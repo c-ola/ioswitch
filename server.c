@@ -79,6 +79,7 @@ int main(void) {
     int running = 1;
     while (running) {
         valread = read(new_socket, input_data, sizeof(struct input_event));
+        printf("received %d bytes\n", (int)valread);
         if (input_data->type == EV_KEY) {
             write(uin_fd, input_data, sizeof(struct input_event));
         }

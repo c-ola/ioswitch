@@ -24,7 +24,7 @@ typedef struct _client {
 int connect_to_server(Client client, struct sockaddr_in serv_addr) {
 
     // Convert IPv4 and IPv6 addresses from text to binary form
-    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<= 0) {
+    if (inet_pton(AF_INET, "192.168.2.37", &serv_addr.sin_addr)<= 0) {
         printf("\nInvalid address/ Address not supported \n");
         return -1;
     }
@@ -91,6 +91,7 @@ int main(int argc, char const* argv[]) {
             printf("failed to send message\n");
             connected = 0;
         }
+        printf("sent %d bytes\n", (int)r);
         //status = read(client.fd, buffer, 1024 - 1);
         //printf("server: %s\n", buffer);
         /*char in_buf[64];
