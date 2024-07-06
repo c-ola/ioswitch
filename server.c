@@ -95,14 +95,19 @@ int main(void) {
         exit(EXIT_FAILURE);
     }
 
-    struct ie_packet data;
+    struct ie_packet data = { 0 };
+    struct input_event ie = { 0 };
     int running = 1;
     while (running) {
-        ssize_t read_bytes = read(new_socket, &data, sizeof(struct ie_packet));
+        /*ssize_t read_bytes = read(new_socket, &data, sizeof(struct ie_packet));
         if (read_bytes == sizeof(struct ie_packet)) {
             for (int i = 0; i < data.count; i++) {
                 write(uin_fd, &data.ie_buf[i], sizeof(struct input_event));
             }
+        }*/
+        ssize_t read_bytes = read(new_socket, &data, sizeof(struct input_event));
+        if (read_bytes == sizeof(struct input_event)) {
+                write(uin_fd, &ie, sizeof(struct input_event));
         }
     }
 

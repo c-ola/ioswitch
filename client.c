@@ -97,15 +97,17 @@ int send_input_event_packet(Client client, dev_reader dr, int device) {
         }
         
         pkt.ie_buf[pkt.count++] = ie;
-
         if (ie.type == EV_SYN) {
+            eop = 1;
+        }
+       /* if (ie.type == EV_SYN) {
             printf("EV_SYN\n");
             eop = 1;
         } else if(ie.type == EV_REL) {
             printf("EV_REL\n");
         } else {
-            printf("unknown");
-        }
+            printf("Unknown\n");
+        }*/
 
         int status;
         if ((status = send(client.fd, &pkt, sizeof(struct ie_packet), 0)) <= 0) {
@@ -114,6 +116,36 @@ int send_input_event_packet(Client client, dev_reader dr, int device) {
         }
     }
     return pkt.count;
+}
+
+// Sends an input event from the specified device
+// returns -1 on error
+int send_input_event(Client client, dev_reader dr, int device) {
+    // timeout should probably be a couple of milliseconds to not block everything
+    struct pollfd pfd = dr.fds[device];
+    struct input_event ie = dr.ies[device];
+
+    int ret = poll(&pfd, 1, -1);
+    if (ret < 0) {
+        printf("timeout\n");
+        return -1;
+    }
+    if (!pfd.revents) {
+        printf("error somehow\n");
+        return -1;
+    }
+    ssize_t r = read(pfd.fd, (void *)&ie, sizeof(struct input_event));
+    if (r < 0) {
+        perror("error reading device");
+        return -1;
+    }
+
+    int status;
+    if ((status = send(client.fd, &ie, sizeof(struct input_event), 0)) <= 0) {
+        perror("failed to send message");
+        return -1;
+    }
+    return 0;
 }
 
 int main(int argc, char **argv) {
@@ -191,8 +223,8 @@ int main(int argc, char **argv) {
     // i think it polls input events too fast so it messes things up
     while (connected) {
         for (int i = 0; i < dev_reader.count; i++) {
-            int res = send_input_event_packet(client, dev_reader, i);
-            printf("%d events sent\n", res);
+            //int res = send_input_event_packet(client, dev_reader, i);
+            int res = send_input_event(client, dev_reader, i);
         }
     }
     // closing the connected socket
