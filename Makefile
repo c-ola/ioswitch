@@ -1,16 +1,15 @@
 CC = gcc
-FLAGS = -g
+FLAGS = -g -Wall
 
 all: server client
 
-dir:
+server: server.c
 	mkdir -p build
-
-server: server.c dir
 	$(CC) $(FLAGS) server.c -o build/server
 
-client: client.c dir
+client: client.c
+	mkdir -p build
 	$(CC) $(FLAGS) client.c -o build/client
 
 clean:
-	rm server client
+	rm build/server build/client

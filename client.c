@@ -6,7 +6,6 @@
 #include <linux/input.h>
 #include <linux/uinput.h>
 #include <netinet/in.h>
-#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/poll.h>
@@ -15,7 +14,7 @@
 #include <unistd.h>
 
 #define PORT 8080
-#define MAX_DEVICES 3
+#define MAX_DEVICES 1
 
 typedef struct _client {
     int fd;
