@@ -1,15 +1,15 @@
 CC = gcc
 FLAGS = -g -Wall
 
-all: server client
+all: daemon ctl
 
-server: server.c
+daemon: ioswitchd.c
 	mkdir -p build
-	$(CC) $(FLAGS) server.c -o build/server
+	$(CC) $(FLAGS) ioswitchd.c client.c server.c -o build/ioswitchd
 
-client: client.c
+ctl: ioswitchctl.c
 	mkdir -p build
-	$(CC) $(FLAGS) client.c -o build/client
+	$(CC) $(FLAGS) ioswitchctl.c client.c -o build/ioswitchctl
 
 clean:
-	rm build/server build/client
+	rm build/ioswitchd build/ioswitchctl
