@@ -21,14 +21,13 @@
 
 int add_device(Server *server, CtlCommand command, int socketfd) {
     int pid = fork();
-    printf("forked\n");
-    fflush(stdout);
     if (pid < 0) {
         perror("Error creating fork");
         return -1;
     }
 
     if (pid == 0) {
+        printf("forked\n");
         close(server->fd);
         create_input_sender(socketfd, command.device, command.ip, command.port);
         exit(1);
@@ -74,7 +73,7 @@ int process_command(Server *server, int socketfd) {
 }
 
 int main (int argc, char** argv) {
-    int port;
+    int port = LOCAL_PORT;
     opterr = 0;
     int opt;
     while ((opt = getopt(argc, argv, ":p:")) != -1) {
@@ -105,12 +104,17 @@ int main (int argc, char** argv) {
 
     printf("Started Server on port %d\n", port);
 
-    if (listen(server.fd, 3) < 0) {
+    if (listen(server.fd, 5) < 0) {
         perror("Error listening for connections");
         return -1;
     }
+
     int running = 1; 
     while (running) {
+        if (listen(server.fd, 5) < 0) {
+            perror("Error listening for connections");
+            return -1;
+        }
         int newsockfd;
         if ((newsockfd = accept(server.fd, (struct sockaddr*)&server.address, &server.addrlen)) < 0) {
             perror("accept");
@@ -125,6 +129,7 @@ int main (int argc, char** argv) {
             fprintf(stderr, "Error reading initialization packet");
             continue;
         }
+        fflush(stdout);
         int pid;
         switch (type) {
             case INPUT:

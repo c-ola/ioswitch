@@ -18,6 +18,7 @@
 int main(int argc, char **argv) {
     // Get options (ip, port, device)
     int port = 8080;
+    int daemon_port = LOCAL_PORT;
     char *ip = "127.0.0.1";
     char *device = "none";
     opterr = 0;
@@ -25,10 +26,13 @@ int main(int argc, char **argv) {
     CtlType ctl_type = CTL_NONE;
 
     int opt;
-    while ((opt = getopt(argc, argv, ":s:i:d:p:")) != -1) {
+    while ((opt = getopt(argc, argv, ":s:i:d:p:l:")) != -1) {
         switch (opt) {
             case 'p':
                 port = atoi(optarg);
+                break;
+            case 'l':
+                daemon_port = atoi(optarg);
                 break;
             case 's':
                 ctl_type = atoi(optarg);
@@ -58,7 +62,7 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    if (connect_to_server(client, ip, port) < 0) {
+    if (connect_to_server(client, "127.0.0.1", daemon_port) < 0) {
         perror("Error connecting to server");
         return -1;
     }

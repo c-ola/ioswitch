@@ -13,6 +13,7 @@
 #include "client.h"
 
 #define MAX_CONNS 4
+#define LOCAL_PORT 8080
 
 typedef enum {
     UNKNOWN,

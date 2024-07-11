@@ -77,7 +77,6 @@ int create_input_listener(int socketfd) {
     return 0;
 }
 
-
 int create_input_sender(int socketfd, char* device, char* ip, unsigned int port) {
     printf("Creating sender to %s:%d\n", ip, port);
     int fd = open(device, O_RDONLY | O_NONBLOCK);
@@ -115,7 +114,7 @@ int create_input_sender(int socketfd, char* device, char* ip, unsigned int port)
     pfd.events = POLLIN;
     
     while (connected) {
-        if (getpid() == 1) {
+        if (getppid() == 1) {
             connected = 0;
             break;
         }
