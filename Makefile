@@ -1,15 +1,18 @@
 CC = gcc
 FLAGS = -g -Wall
+DAEMON_SRC_FILES = src/client.c src/server.c src/ctl.c
+CTL_SRC_FILES = src/client.c src/ctl.c
 
 all: daemon ctl
 
-daemon: ioswitchd.c
+dir:
 	mkdir -p build
-	$(CC) $(FLAGS) ioswitchd.c client.c server.c -o build/ioswitchd
 
-ctl: ioswitchctl.c
-	mkdir -p build
-	$(CC) $(FLAGS) ioswitchctl.c client.c -o build/ioswitchctl
+daemon: src/ioswitchd.c dir
+	$(CC) $(FLAGS) src/ioswitchd.c $(DAEMON_SRC_FILES) -o build/ioswitchd
+
+ctl: src/ioswitchctl.c dir
+	$(CC) $(FLAGS) src/ioswitchctl.c $(CTL_SRC_FILES) -o build/ioswitchctl
 
 clean:
 	rm build/ioswitchd build/ioswitchctl

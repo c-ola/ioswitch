@@ -1,3 +1,4 @@
+#include "ctl.h"
 #include "server.h"
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -26,7 +27,7 @@ int main(int argc, char **argv) {
     CtlType ctl_type = CTL_NONE;
 
     int opt;
-    while ((opt = getopt(argc, argv, ":s:i:d:p:l:")) != -1) {
+    while ((opt = getopt(argc, argv, ":t:i:d:p:l:")) != -1) {
         switch (opt) {
             case 'p':
                 port = atoi(optarg);
@@ -34,8 +35,8 @@ int main(int argc, char **argv) {
             case 'l':
                 daemon_port = atoi(optarg);
                 break;
-            case 's':
-                ctl_type = atoi(optarg);
+            case 't':
+                ctl_type = strtoctl(optarg);
                 break;
             case 'd':
                 device = optarg;
@@ -73,9 +74,19 @@ int main(int argc, char **argv) {
     if ((status = send(client.fd, &type, sizeof(SocketType), 0)) <= 0) {
         return -1;
     }
-    
+
+    char buffer[64];
+    status = recv(client.fd, buffer, sizeof(buffer), 0);
+    if (status < 0) {
+        perror("Did not get handshake");
+        return -1;
+    }
+    printf("hs: %s\n", buffer);
+
+
     CtlCommand command = { 0 };
     command.type = ctl_type;
+    printf("sending %s command\n", ctltostr[ctl_type]);
     if (strlcpy(command.device, device, 64) >= 64) return -1;
     if (strlcpy(command.ip, ip, 64) >= 64) return -1;
     command.port = port;
