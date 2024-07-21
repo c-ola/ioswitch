@@ -34,6 +34,7 @@ int connect_to_server(Client client, const char *ip, unsigned int port) {
     return 0;
 }
 
+// returns 1 if binds have all been pressed
 int send_input_event(struct pollfd pfd, Client client) {
     // timeout should probably be a couple of milliseconds to not block everything
     struct input_event ie = { 0 };
@@ -52,6 +53,20 @@ int send_input_event(struct pollfd pfd, Client client) {
         perror("error reading device");
         return -1;
     }
+    
+    if (client.num_binds > 0) {
+        int binds_pressed = 0;
+        for (int i = 0; i < client.num_binds; i++) {
+            if (client.binds[i] == ie.code) {
+                client.binds_buf[i] = ie.value;
+            }
+            if (client.binds_buf[i] != 0) {
+                binds_pressed += 1;
+            }
+        }
+        if (binds_pressed == client.num_binds) return 1;
+    }
+
 
     int status;
     if ((status = send(client.fd, &ie, sizeof(struct input_event), 0)) <= 0) {

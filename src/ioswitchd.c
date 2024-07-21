@@ -47,6 +47,7 @@ int main (int argc, char** argv) {
     server.ctl_handlers[CTL_LIST] = list_devices;
     server.ctl_handlers[CTL_RM_DEVICE] = rm_device;
     server.ctl_handlers[CTL_ADD_DEVICE] = add_device;
+    server.ctl_handlers[CTL_ADD_BINDING] = add_binding;
     
     if (start_server(&server, port)){
         fprintf(stderr, "Could not start Server\n");
@@ -98,6 +99,7 @@ int main (int argc, char** argv) {
                     printf("Server: New client connected\n");
                     close(newsockfd);
                 }
+                printf("\n");
                 break;
             case MESSAGE:
                 printf("Server: received ctl message\n");
@@ -106,10 +108,12 @@ int main (int argc, char** argv) {
                     running = 0;
                 }
                 close(newsockfd);
+                printf("\n");
                 break;
             default:
                 fprintf(stderr, "Error Unknown type Defaulted\n");
                 close(newsockfd);
+                printf("\n");
                 break;
         }
 

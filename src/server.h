@@ -49,7 +49,9 @@ int create_input_listener(int socketfd);
 int list_devices(Server* server, CtlCommand command);
 int rm_device(Server* server, CtlCommand command);
 int add_device(Server* server, CtlCommand command);
+int add_binding(Server *server, CtlCommand command);
 
 int create_input_sender(char* device, char* ip, unsigned int port);
+int create_input_binding(char *device, char *ip, unsigned int port);
 
 #endif

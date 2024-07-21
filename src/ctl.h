@@ -12,6 +12,7 @@ typedef enum CtlType {
     CTL_NONE = 0,
     CTL_LIST,
     CTL_ADD_DEVICE,
+    CTL_ADD_BINDING,
     CTL_RM_DEVICE,
     CTL_DISABLE,
     CTL_ENABLE,
