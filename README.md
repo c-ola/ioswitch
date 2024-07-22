@@ -47,5 +47,4 @@ Command can be:
 
 ### Issues
 - If the receiver shutsdown, the sender's devices are not re-enabled
-- Sometimes it just breaks
 - Probably many others i'm not aware of

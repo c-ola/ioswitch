@@ -332,7 +332,12 @@ int create_input_binding(char *device, char *ip, unsigned int port) {
     free(client.binds_buf);
     // closing the connected socket
     close(client.fd);
+
     char *const * args = { NULL };
-    execvp("ioswitchstop", args);
+    int pid = fork();
+    if (pid == 0) {
+        execvp("ioswitchstop", args);
+        exit(1);
+    }
     return 0;
 }
