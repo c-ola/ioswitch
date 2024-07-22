@@ -1,12 +1,7 @@
 #ifndef CTL_H
 #define CTL_H
 
-#include <fcntl.h>
-#include <poll.h>
-#include <linux/input.h>
-
 #define MAX_DEVICES 5
-
 
 typedef enum CtlType {
     CTL_NONE = 0,

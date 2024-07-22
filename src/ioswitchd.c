@@ -2,27 +2,37 @@
 #include "ctl.h"
 #include "server.h"
 #include "client.h"
+#include "common.h"
 
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include <arpa/inet.h>
 #include <fcntl.h>
-#include <linux/input.h>
-#include <linux/uinput.h>
-#include <netinet/in.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/poll.h>
-#include <sys/socket.h>
 #include <sys/types.h>
-#include <unistd.h>
+
+
+#ifdef __linux__
+    #include <linux/input.h>
+    #include <linux/uinput.h>
+#endif
+
+#ifdef __unix__
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <sys/poll.h>
+    #include <sys/socket.h>
+#else
+#include <windows.h>
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+#endif
+
 
 int main (int argc, char** argv) {
     int port = LOCAL_PORT;
     opterr = 0;
     int opt;
+#ifdef __unix__
     while ((opt = getopt(argc, argv, ":p:")) != -1) {
         switch (opt) {
             case 'p':
@@ -40,6 +50,7 @@ int main (int argc, char** argv) {
                   }*/
         }
     }
+#endif
 
     // Server that handles receiving input and emitting to the computer
     // Can also receive messages that tell it to start a new sender
@@ -72,18 +83,19 @@ int main (int argc, char** argv) {
         
         // Get the first packet that tells the server how to handle the connection
         SocketType type = UNKNOWN;
-        ssize_t r = read(newsockfd, &type, sizeof(SocketType));
+        ssize_t r = recv(newsockfd, (char*)&type, sizeof(SocketType), 0);
         if (r < 0) {
             close(newsockfd);
-            fprintf(stderr, "Error reading initialization packet");
+            perror("Error reading initialization packet");
             continue;
         }
         const char hs[] = "good";
-        r = write(newsockfd, hs, sizeof(hs));
+        r = send(newsockfd, hs, sizeof(hs), 0);
         int pid;
 
         switch (type) {
-            case INPUT:
+            case INPUT_CONN:
+#ifdef __unix__
                 pid = fork();
                 if (pid < 0) {
                     perror("Error creating fork");
@@ -101,6 +113,7 @@ int main (int argc, char** argv) {
                 } else {
                     close(newsockfd);
                 }
+#endif
                 break;
             case MESSAGE:
                 printf("\n");
@@ -111,16 +124,15 @@ int main (int argc, char** argv) {
                 }
                 close(newsockfd);
                 break;
-            default:
+            case UNKNOWN:
                 fprintf(stderr, "\nError Unknown Conn Type\n");
                 close(newsockfd);
-                printf("\n");
                 break;
         }
 
     }
 
-    close(server.fd);
+    CLOSESOCK(server.fd);
     printf("exited\n");
     return 0;
 }

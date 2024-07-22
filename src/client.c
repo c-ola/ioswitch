@@ -1,18 +1,22 @@
 #include "client.h"
 
-#include <linux/input.h>
-#include <sys/poll.h>
-#include <arpa/inet.h>
 #include <fcntl.h>
-#include <linux/input.h>
-#include <linux/uinput.h>
-#include <netinet/in.h>
 #include <stdio.h>
-#include <sys/poll.h>
-#include <sys/socket.h>
-#include <sys/types.h>
 #include <unistd.h>
 
+#ifdef __unix__
+    #include <linux/input.h>
+    #include <linux/uinput.h>
+    #include <sys/poll.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <sys/poll.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+#else 
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+#endif
 
 int connect_to_server(Client client, const char *ip, unsigned int port) {
     printf("Trying to connect with ip %s:%d\n", ip, port);
@@ -34,6 +38,7 @@ int connect_to_server(Client client, const char *ip, unsigned int port) {
     return 0;
 }
 
+#ifdef __unix__
 // returns 1 if binds have all been pressed
 int send_input_event(struct pollfd pfd, Client client) {
     // timeout should probably be a couple of milliseconds to not block everything
@@ -75,3 +80,4 @@ int send_input_event(struct pollfd pfd, Client client) {
     }
     return 0;
 }
+#endif

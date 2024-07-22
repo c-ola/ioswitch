@@ -1,29 +1,41 @@
 #include "server.h"
 #include "client.h"
-#include <arpa/inet.h>
 #include <fcntl.h>
-#include <linux/input-event-codes.h>
-#include <netinet/in.h>
 #include <signal.h>
 #include <string.h>
-#include <sys/poll.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "common.h"
+
+#if defined(_WIN32) || defined(_WIN64)
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+#else
+    #include <sys/socket.h>
+    #include <sys/poll.h>
+    #include <arpa/inet.h>
+    #include <linux/input-event-codes.h>
+    #include <netinet/in.h>
+#endif
+
 
 int start_server(Server *server, int port) {
+
+    CREATE_SOCKET(server->fd);
     server->addrlen = sizeof(struct sockaddr_in);
-    if ((server->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("creating the socket failed");
-        return -1;
-    }
 
     // Forcefully attaching socket to the port PORT
     // What does this actually do??
-    if (setsockopt(server->fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT,
-                &server->opt, sizeof(server->opt))) {
+    server->opt = 0;
+#ifdef __unix__
+    if (setsockopt(server->fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &server->opt, sizeof(server->opt)))
+#else
+    if (setsockopt(server->fd, SOL_SOCKET, SO_REUSEADDR, (const char*)&server->opt, sizeof(int)))
+#endif
+    {
         perror("setsockopt");
         return -1;
     }
@@ -42,8 +54,8 @@ int start_server(Server *server, int port) {
 }
 
 int process_command(Server *server, int socketfd) {
-    CtlCommand command = { 0 };
-    ssize_t r = recv(socketfd, &command, sizeof(struct CtlCommand), 0);
+    CtlCommand command;
+    ssize_t r = recv(socketfd, (char*)&command, sizeof(struct CtlCommand), 0);
     if (r < 0) {
         fprintf(stderr, "Error reading command packet");
         return -1;
@@ -81,6 +93,7 @@ int add_device(Server *server, CtlCommand command) {
         return -1;
     }
 
+#ifdef __unix__
     int pid = fork();
     if (pid < 0) {
         perror("Error creating fork");
@@ -103,6 +116,7 @@ int add_device(Server *server, CtlCommand command) {
         }
         printf("Added sender with id %d and name %s\n", pid, command.device);
     }
+#endif
 
     return 0;
 }
@@ -114,6 +128,7 @@ int add_binding(Server *server, CtlCommand command) {
         return -1;
     }
 
+#ifdef __unix__
     int pid = fork();
     if (pid < 0) {
         perror("Error creating fork");
@@ -137,7 +152,7 @@ int add_binding(Server *server, CtlCommand command) {
         }
         printf("Added sender with id %d and name %s\n", pid, command.device);
     }
-
+#endif
     return 0;
 }
 
@@ -157,7 +172,10 @@ int rm_device(Server *server, CtlCommand command) {
             printf("Removing device %s with pid %d\n", name, sender_pid);
             server->sender_ids[i] = 0;
             server->num_senders--;
+#ifdef __unix__
             kill(sender_pid, SIGKILL);
+#else
+#endif
             return 0;
         }
     }
@@ -169,6 +187,7 @@ int rm_device(Server *server, CtlCommand command) {
 // maybe make this threaded instead of forked
 // ALSO ABSTRACT AWAY THE INPUT DEVICE
 int create_input_listener(int socketfd) {
+#ifdef __linux__
     struct uinput_setup usetup;
     int uin_fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
     /*
@@ -212,11 +231,16 @@ int create_input_listener(int socketfd) {
     printf("Client disconnected\n");
     ioctl(uin_fd, UI_DEV_DESTROY);
     close(uin_fd);
+#else
+    printf("input listener for windows\n");
+#endif
+
     return 0;
 }
 
 int create_input_sender(char *device, char *ip, unsigned int port, int num_binds, int* binds) {
     printf("Creating sender to %s:%d\n", ip, port);
+#ifdef __unix__
     int fd = open(device, O_RDONLY | O_NONBLOCK);
     if (fd < 0) {
         fprintf(stderr, "error unable to open for reading %s\n", device);
@@ -240,7 +264,7 @@ int create_input_sender(char *device, char *ip, unsigned int port, int num_binds
         return -1;
     }
 
-    SocketType type = INPUT;
+    SocketType type = INPUT_CONN;
     if (send(client.fd, &type, sizeof(SocketType), 0) < 0) {
         return -1;
     }
@@ -283,6 +307,9 @@ int create_input_sender(char *device, char *ip, unsigned int port, int num_binds
         execvp("ioswitchstop", args);
         exit(1);
     }
+#else
+    printf("Creating input sender for windows\n");
+#endif
 
     return 0;
 }

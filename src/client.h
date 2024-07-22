@@ -1,7 +1,11 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include <sys/poll.h>
+#ifdef __unix__
+    #include <sys/poll.h>
+#else 
+    #include <winsock2.h>
+#endif
 
 typedef struct _client {
     int fd;

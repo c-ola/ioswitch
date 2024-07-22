@@ -1,14 +1,22 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include <netinet/in.h>
-#include <sys/socket.h>
+#include "ctl.h"
+
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
-#include <poll.h>
-#include "ctl.h"
-#include <linux/uinput.h>
+
+#ifdef __unix__
+    #include <netinet/in.h>
+    #include <sys/socket.h>
+    #include <sys/poll.h>
+    #include <linux/uinput.h>
+#else
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+#endif
+
 
 #define MAX_SENDERS 4
 #define LOCAL_PORT 8080
@@ -16,7 +24,7 @@
 
 typedef enum {
     UNKNOWN,
-    INPUT,
+    INPUT_CONN,
     MESSAGE,
 } SocketType;
 

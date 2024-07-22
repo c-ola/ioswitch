@@ -1,18 +1,20 @@
 CC = gcc
+TARGET?=UNIX
 FLAGS = -g -Wall
+
+ifeq ($(TARGET), WIN)
+LIBS = -lws2_32
+endif
 DAEMON_SRC_FILES = src/client.c src/server.c src/ctl.c
 CTL_SRC_FILES = src/client.c src/ctl.c
 
 all: daemon ctl
 
-dir:
-	mkdir -p build
+daemon: src/ioswitchd.c
+	$(CC) $(FLAGS) src/ioswitchd.c $(DAEMON_SRC_FILES) -o build/ioswitchd $(LIBS)
 
-daemon: src/ioswitchd.c dir
-	$(CC) $(FLAGS) src/ioswitchd.c $(DAEMON_SRC_FILES) -o build/ioswitchd
-
-ctl: src/ioswitchctl.c dir
-	$(CC) $(FLAGS) src/ioswitchctl.c $(CTL_SRC_FILES) -o build/ioswitchctl
+ctl: src/ioswitchctl.c
+	$(CC) $(FLAGS) src/ioswitchctl.c $(CTL_SRC_FILES) -o build/ioswitchctl $(LIBS)
 
 install: all
 	cp ioswitchrun /usr/local/bin/
