@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <linux/input-event-codes.h>
+#include <netinet/in.h>
 #include <signal.h>
 #include <string.h>
 #include <sys/poll.h>
@@ -10,6 +11,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+
 
 int start_server(Server *server, int port) {
     server->addrlen = sizeof(struct sockaddr_in);
@@ -27,11 +30,11 @@ int start_server(Server *server, int port) {
     }
 
     server->address.sin_family = AF_INET;
-    server->address.sin_addr.s_addr = inet_addr("127.0.0.1");
+    //server->address.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server->address.sin_addr.s_addr = htons(INADDR_ANY);
     server->address.sin_port = htons(port);
 
-    if (bind(server->fd, (struct sockaddr *)&server->address, server->addrlen) <
-            0) {
+    if (bind(server->fd, (struct sockaddr *)&server->address, server->addrlen) < 0) {
         perror("binding to port failed");
         return -1;
     }
@@ -50,6 +53,10 @@ int process_command(Server *server, int socketfd) {
     printf("Received command %s\n", ctltostr[command.type]);
     if (command.type == CTL_KILL) return 1;
     server->ctl_handlers[command.type](server, command);
+    return 0;
+}
+
+int none_command(Server *server, CtlCommand command) {
     return 0;
 }
 
@@ -171,7 +178,7 @@ int create_input_listener(int socketfd) {
      * created, to pass key events, in this case the space key.
      */
     ioctl(uin_fd, UI_SET_EVBIT, EV_KEY);
-    for (int i = 0; i < KEY_KPDOT; i++) {
+    for (int i = 0; i < KEY_COMPOSE; i++) {
         ioctl(uin_fd, UI_SET_KEYBIT, i);
     }
 
@@ -275,8 +282,8 @@ int create_input_binding(char *device, char *ip, unsigned int port) {
     client.num_binds = 3;
     client.binds = malloc(client.num_binds * sizeof(int));
     client.binds_buf = malloc(client.num_binds * sizeof(int));
-    client.binds[0] = KEY_LEFTCTRL;
-    client.binds[1] = KEY_LEFTALT;
+    client.binds[0] = KEY_LEFTMETA;
+    client.binds[1] = KEY_LEFTSHIFT;
     client.binds[2] = KEY_COMMA;
 
 
@@ -326,6 +333,6 @@ int create_input_binding(char *device, char *ip, unsigned int port) {
     // closing the connected socket
     close(client.fd);
     char *const * args = { NULL };
-    execv("./ioswitch_stop.sh", args);
+    execvp("ioswitchstop", args);
     return 0;
 }

@@ -14,5 +14,11 @@ daemon: src/ioswitchd.c dir
 ctl: src/ioswitchctl.c dir
 	$(CC) $(FLAGS) src/ioswitchctl.c $(CTL_SRC_FILES) -o build/ioswitchctl
 
+install: all
+	cp ioswitchrun /usr/local/bin/
+	cp ioswitchstop /usr/local/bin/
+	cp build/ioswitchctl /usr/local/bin/
+	cp build/ioswitchd /usr/local/bin/
+
 clean:
 	rm build/ioswitchd build/ioswitchctl

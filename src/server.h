@@ -46,6 +46,7 @@ int start_server(Server* server, int port);
 int process_command(Server* server, int socketfd);
 
 int create_input_listener(int socketfd);
+int none_command(Server *server, CtlCommand command);
 int list_devices(Server* server, CtlCommand command);
 int rm_device(Server* server, CtlCommand command);
 int add_device(Server* server, CtlCommand command);

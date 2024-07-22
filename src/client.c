@@ -22,12 +22,12 @@ int connect_to_server(Client client, const char *ip, unsigned int port) {
 
     // Convert IPv4 and IPv6 addresses from text to binary form
     if (inet_pton(AF_INET, ip, &serv_addr.sin_addr) <= 0) {
-        printf("\nInvalid address/ Address not supported \n");
+        printf("Invalid address/ Address not supported \n");
         return -1;
     }
 
     if ((client.status = connect(client.fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) < 0) {
-        printf("\nConnection Failed \n");
+        printf("Connection Failed \n");
         return -1;
     }
 

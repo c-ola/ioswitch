@@ -44,6 +44,7 @@ int main (int argc, char** argv) {
     // Server that handles receiving input and emitting to the computer
     // Can also receive messages that tell it to start a new sender
     Server server = { 0 };
+    server.ctl_handlers[CTL_NONE] = none_command;
     server.ctl_handlers[CTL_LIST] = list_devices;
     server.ctl_handlers[CTL_RM_DEVICE] = rm_device;
     server.ctl_handlers[CTL_ADD_DEVICE] = add_device;
