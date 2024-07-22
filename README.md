@@ -17,25 +17,33 @@ sudo make install
 
 ### Usage
 
-Run the daemon (it must be run on more than one device)
+There are a couple of options for running the daemon
+
+1. Run the daemon manually with sudo 
 ```
 sudo ioswitchd -p <port>
 ```
+2. Add yourself to the `input` group with `sudo usermod -a -G input $USER`. Then you can run it with some sort of startup script using `ioswitchd -p <port>` (for example, the i3 config)
+
+3. Use systemd (probably overkill, but the .service file is in `system/`). Just change the home user name and then copy it to `/etc/systemd/system/`. You will then have to run `sudo systemctl daemon-reload` and enable the service.
+
 
 Run commands
 ```
 ioswitchctl -t <command> -p <port> -l <daemon_port> -i <ip> -d </dev/input/eventX>
 ```
 
-At the moment, the default command to stop sending and re-enable is meta+shift+comma
-You can also have a binding to start it, for example, I am using in i3:
+You can modify the device lists in the scripts before installing depending on what you want to activate/disable when running the keybinds.
+
+At the moment, the default command to stop sending run the stop script is meta+shift+comma
+You can also have your own binding to start it, for example, I am using it in i3 with:
 ```
 bindsym $mod+Shift+period exec --no-startup-id ioswitchrun
 ```
 You can modify ioswitchrun and ioswitchstop to suit the devices that you want to start/stop sending.
 TODO: make a script that can grab the xinput ids for each device based on name (they change sometimes), and also grab all the ids for each device, since some devices have multiple
 
-Command can be:
+Commands can be:
 - list
 - kill
 - add

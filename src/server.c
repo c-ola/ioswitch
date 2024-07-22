@@ -13,7 +13,6 @@
 #include <unistd.h>
 
 
-
 int start_server(Server *server, int port) {
     server->addrlen = sizeof(struct sockaddr_in);
     if ((server->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -89,9 +88,8 @@ int add_device(Server *server, CtlCommand command) {
     }
 
     if (pid == 0) {
-        printf("forked\n");
         close(server->fd);
-        create_input_sender(command.device, command.ip, command.port);
+        create_input_sender(command.device, command.ip, command.port, 0, NULL);
         exit(1);
     } else {
         // TODO check for connection to port first
@@ -123,9 +121,9 @@ int add_binding(Server *server, CtlCommand command) {
     }
 
     if (pid == 0) {
-        printf("forked\n");
         close(server->fd);
-        create_input_binding(command.device, command.ip, command.port);
+        int binds[] = {KEY_LEFTMETA, KEY_LEFTSHIFT, KEY_COMMA};
+        create_input_sender(command.device, command.ip, command.port, 3, binds);
         exit(1);
     } else {
         // TODO check for connection to port first
@@ -189,12 +187,13 @@ int create_input_listener(int socketfd) {
     ioctl(uin_fd, UI_SET_EVBIT, EV_REL);
     ioctl(uin_fd, UI_SET_RELBIT, REL_X);
     ioctl(uin_fd, UI_SET_RELBIT, REL_Y);
+    ioctl(uin_fd, UI_SET_KEYBIT, BTN_MIDDLE);
 
     memset(&usetup, 0, sizeof(usetup));
     usetup.id.bustype = BUS_USB;
     usetup.id.vendor = 0x1234;  /* sample vendor */
     usetup.id.product = 0x5678; /* sample product */
-    strcpy(usetup.name, "Example device");
+    strcpy(usetup.name, "IOswitch Device");
 
     ioctl(uin_fd, UI_DEV_SETUP, &usetup);
     ioctl(uin_fd, UI_DEV_CREATE);
@@ -216,7 +215,7 @@ int create_input_listener(int socketfd) {
     return 0;
 }
 
-int create_input_sender(char *device, char *ip, unsigned int port) {
+int create_input_sender(char *device, char *ip, unsigned int port, int num_binds, int* binds) {
     printf("Creating sender to %s:%d\n", ip, port);
     int fd = open(device, O_RDONLY | O_NONBLOCK);
     if (fd < 0) {
@@ -227,65 +226,9 @@ int create_input_sender(char *device, char *ip, unsigned int port) {
 
     // Connect the client to the server
     Client client = {0};
-    if ((client.fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        printf("\n Socket creation error \n");
-        return -1;
-    }
-
-    if (connect_to_server(client, ip, port) < 0) {
-        perror("Error connecting to server");
-        return -1;
-    }
-
-    SocketType type = INPUT;
-    if (send(client.fd, &type, sizeof(SocketType), 0) < 0) {
-        return -1;
-    }
-
-    printf("Connected to server\n");
-    // set up for reading from /dev/input/eventX
-
-    int connected = 1;
-    printf("started sending...\n");
-    // i think it polls input events too fast so it messes things u
-    struct pollfd pfd;
-    pfd.fd = fd;
-    pfd.events = POLLIN;
-
-    while (connected) {
-        if (getppid() == 1) {
-            connected = 0;
-            break;
-        }
-        int res = send_input_event(pfd, client);
-        if (res < 0) {
-            fprintf(stderr, "Error occured, closing\n");
-            connected = 0;
-        }
-    }
-    // closing the connected socket
-    close(client.fd);
-    return 0;
-}
-
-int create_input_binding(char *device, char *ip, unsigned int port) {
-    printf("Creating sender to %s:%d\n", ip, port);
-    int fd = open(device, O_RDONLY | O_NONBLOCK);
-    if (fd < 0) {
-        fprintf(stderr, "error unable to open for reading %s\n", device);
-        return -1;
-    }
-    printf("Opened device: %s\n", device);
-
-    // Connect the client to the server
-    Client client = {0};
-    client.num_binds = 3;
-    client.binds = malloc(client.num_binds * sizeof(int));
+    client.num_binds = num_binds;
+    client.binds = binds;
     client.binds_buf = malloc(client.num_binds * sizeof(int));
-    client.binds[0] = KEY_LEFTMETA;
-    client.binds[1] = KEY_LEFTSHIFT;
-    client.binds[2] = KEY_COMMA;
-
 
     if ((client.fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         printf("\n Socket creation error \n");
@@ -319,7 +262,7 @@ int create_input_binding(char *device, char *ip, unsigned int port) {
         }
         int res = send_input_event(pfd, client);
         if (res == 1) {
-            printf("pressed the key binds wow\n");
+            printf("Received keybind inputs\n");
             connected = 0;
         }
 
@@ -328,10 +271,11 @@ int create_input_binding(char *device, char *ip, unsigned int port) {
             connected = 0;
         }
     }
-    free(client.binds);
-    free(client.binds_buf);
     // closing the connected socket
+    free(client.binds_buf);
     close(client.fd);
+
+    if (client.num_binds == 0) return 0;
 
     char *const * args = { NULL };
     int pid = fork();
@@ -339,5 +283,6 @@ int create_input_binding(char *device, char *ip, unsigned int port) {
         execvp("ioswitchstop", args);
         exit(1);
     }
+
     return 0;
 }

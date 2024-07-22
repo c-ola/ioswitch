@@ -52,7 +52,6 @@ int rm_device(Server* server, CtlCommand command);
 int add_device(Server* server, CtlCommand command);
 int add_binding(Server *server, CtlCommand command);
 
-int create_input_sender(char* device, char* ip, unsigned int port);
-int create_input_binding(char *device, char *ip, unsigned int port);
+int create_input_sender(char *device, char *ip, unsigned int port, int num_binds, int* binds);
 
 #endif

@@ -92,27 +92,27 @@ int main (int argc, char** argv) {
 
                 if (pid == 0) {
                     close(server.fd);
+                    printf("\n");
+                    printf("Server: New client connected\n");
                     printf("Creating new input listener\n");
                     create_input_listener(newsockfd);
                     exit(1);
                     return 0;
                 } else {
-                    printf("Server: New client connected\n");
                     close(newsockfd);
                 }
-                printf("\n");
                 break;
             case MESSAGE:
+                printf("\n");
                 printf("Server: received ctl message\n");
                 int res = process_command(&server, newsockfd);
                 if (res == 1) {
                     running = 0;
                 }
                 close(newsockfd);
-                printf("\n");
                 break;
             default:
-                fprintf(stderr, "Error Unknown type Defaulted\n");
+                fprintf(stderr, "\nError Unknown Conn Type\n");
                 close(newsockfd);
                 printf("\n");
                 break;
