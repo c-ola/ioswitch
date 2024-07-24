@@ -1,0 +1,100 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-Wall",
+      "-o",
+      "build/ioswitchd",
+      "src/ioswitchd.c"
+    ],
+    "directory": "/home/nikola/programming/ioswitch",
+    "file": "/home/nikola/programming/ioswitch/src/ioswitchd.c",
+    "output": "/home/nikola/programming/ioswitch/build/ioswitchd"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-Wall",
+      "-o",
+      "build/ioswitchd",
+      "src/client.c"
+    ],
+    "directory": "/home/nikola/programming/ioswitch",
+    "file": "/home/nikola/programming/ioswitch/src/client.c",
+    "output": "/home/nikola/programming/ioswitch/build/ioswitchd"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-Wall",
+      "-o",
+      "build/ioswitchd",
+      "src/server.c"
+    ],
+    "directory": "/home/nikola/programming/ioswitch",
+    "file": "/home/nikola/programming/ioswitch/src/server.c",
+    "output": "/home/nikola/programming/ioswitch/build/ioswitchd"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-Wall",
+      "-o",
+      "build/ioswitchd",
+      "src/ctl.c"
+    ],
+    "directory": "/home/nikola/programming/ioswitch",
+    "file": "/home/nikola/programming/ioswitch/src/ctl.c",
+    "output": "/home/nikola/programming/ioswitch/build/ioswitchd"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-Wall",
+      "-o",
+      "build/ioswitchctl",
+      "src/ioswitchctl.c"
+    ],
+    "directory": "/home/nikola/programming/ioswitch",
+    "file": "/home/nikola/programming/ioswitch/src/ioswitchctl.c",
+    "output": "/home/nikola/programming/ioswitch/build/ioswitchctl"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-Wall",
+      "-o",
+      "build/ioswitchctl",
+      "src/client.c"
+    ],
+    "directory": "/home/nikola/programming/ioswitch",
+    "file": "/home/nikola/programming/ioswitch/src/client.c",
+    "output": "/home/nikola/programming/ioswitch/build/ioswitchctl"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-Wall",
+      "-o",
+      "build/ioswitchctl",
+      "src/ctl.c"
+    ],
+    "directory": "/home/nikola/programming/ioswitch",
+    "file": "/home/nikola/programming/ioswitch/src/ctl.c",
+    "output": "/home/nikola/programming/ioswitch/build/ioswitchctl"
+  }
+]

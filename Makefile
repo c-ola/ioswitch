@@ -1,12 +1,21 @@
 CC = gcc
-TARGET?=UNIX
-FLAGS = -g -Wall
-
-ifeq ($(TARGET), WIN)
-LIBS = -lws2_32
+FLAGS := -g -Wall
+PLATFORM?=UNIX
+ifeq ($(PLATFORM), WIN)
+	LIBS := -lws2_32
+else
+	LIBS := -lpthread
 endif
-DAEMON_SRC_FILES = src/client.c src/server.c src/ctl.c
-CTL_SRC_FILES = src/client.c src/ctl.c
+
+TARGET?=DEBUG
+ifeq ($(TARGET), RELEASE)
+	FLAGS := $(FLAGS) -O3
+else
+	FLAGS := $(FLAGS) -fsanitize=address -fno-omit-frame-pointer -O1
+endif
+
+DAEMON_SRC_FILES = src/client.c src/server.c src/ctl.c src/common.c
+CTL_SRC_FILES = src/client.c src/ctl.c src/common.c
 
 all: daemon ctl
 

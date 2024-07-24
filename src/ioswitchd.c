@@ -1,7 +1,6 @@
 
 #include "ctl.h"
 #include "server.h"
-#include "client.h"
 #include "common.h"
 
 #include <unistd.h>
@@ -17,16 +16,16 @@
 #endif
 
 #ifdef __unix__
+    #include <pthread.h>
     #include <arpa/inet.h>
     #include <netinet/in.h>
     #include <sys/poll.h>
     #include <sys/socket.h>
 #else
-#include <windows.h>
+    #include <windows.h>
     #include <winsock2.h>
     #include <ws2tcpip.h>
 #endif
-
 
 int main (int argc, char** argv) {
     int port = LOCAL_PORT;
@@ -59,7 +58,16 @@ int main (int argc, char** argv) {
     server.ctl_handlers[CTL_LIST] = list_devices;
     server.ctl_handlers[CTL_RM_DEVICE] = rm_device;
     server.ctl_handlers[CTL_ADD_DEVICE] = add_device;
-    server.ctl_handlers[CTL_ADD_BINDING] = add_binding;
+    //server.ctl_handlers[CTL_ADD_BINDING] = add_binding;
+    server.listener_mutex = malloc(sizeof(pthread_mutex_t));
+    server.sender_mutex = malloc(sizeof(pthread_mutex_t));
+    *server.listener_mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+    *server.sender_mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+    server.sender_flags = malloc(MAX_SENDERS * sizeof(int));
+    server.listen_flags = malloc(MAX_LISTENERS * sizeof(int));
+
+    memset(server.listen_flags, 0, MAX_LISTENERS * sizeof(int));
+    memset(server.sender_flags, 0, MAX_SENDERS * sizeof(int));
     
     if (start_server(&server, port)){
         fprintf(stderr, "Could not start Server\n");
@@ -91,27 +99,34 @@ int main (int argc, char** argv) {
         }
         const char hs[] = "good";
         r = send(newsockfd, hs, sizeof(hs), 0);
-        int pid;
 
         switch (type) {
             case INPUT_CONN:
 #ifdef __unix__
-                pid = fork();
-                if (pid < 0) {
-                    perror("Error creating fork");
-                    return -1;
-                }
+                {
+                    int num_listeners = 0;
+                    for (int i = 0; i < MAX_LISTENERS; i++) {
+                        if (server.listen_flags[i] == 0) {
+                            printf("Server: New client connected\n");
+                            ListenerArgs* args = malloc(sizeof(ListenerArgs));
+                            args->newsockfd = newsockfd;
+                            args->flag = &server.listen_flags[i];
+                            args->mut_ptr = server.listener_mutex;
 
-                if (pid == 0) {
-                    close(server.fd);
-                    printf("\n");
-                    printf("Server: New client connected\n");
-                    printf("Creating new input listener\n");
-                    create_input_listener(newsockfd);
-                    exit(1);
-                    return 0;
-                } else {
-                    close(newsockfd);
+                            pthread_mutex_lock(server.listener_mutex);
+                            server.listen_flags[i] = 1;
+                            pthread_mutex_unlock(server.listener_mutex);
+                            pthread_create(&server.listen_handles[i], NULL, &spawn_listener_thread, (void*)args);
+                            pthread_detach(server.listen_handles[i]);
+                            printf("Created new input listener\n");
+                            break;
+                        } else {
+                            num_listeners++;
+                        }
+                    }
+                    if (num_listeners == MAX_LISTENERS) {
+                        printf("Listeners at Max Capacity\n");
+                    }
                 }
 #endif
                 break;
@@ -131,6 +146,19 @@ int main (int argc, char** argv) {
         }
 
     }
+
+    pthread_mutex_lock(server.listener_mutex);
+    for (int i = 0; i < MAX_LISTENERS; i++) {
+        if (server.listen_flags[i] != 0) {
+            pthread_cancel(server.listen_handles[i]);
+        }
+    }
+    pthread_mutex_unlock(server.listener_mutex);
+    
+    free(server.sender_mutex);
+    free(server.sender_flags);
+    free(server.listener_mutex);
+    free(server.listen_flags);
 
     CLOSESOCK(server.fd);
     printf("exited\n");

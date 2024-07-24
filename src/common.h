@@ -1,3 +1,6 @@
+#ifndef COMMON_H
+#define COMMON_H
+
 #ifdef __unix__
     #include <arpa/inet.h>
     #include <netinet/in.h>
@@ -27,4 +30,24 @@
         printf("\n Socket creation error \n");\
         return -1;\
     }
+#endif
+
+typedef struct SenderArgs {
+    int dfd;
+    int cfd;
+    int* keybind;
+    int num_keys;
+    int* flag;
+    pthread_mutex_t* mut_ptr;
+} SenderArgs;
+
+typedef struct ListenerArgs {
+    int newsockfd;
+    int* flag;
+    pthread_mutex_t* mut_ptr;
+} ListenerArgs;
+
+
+int str_to_key(const char* str); 
+
 #endif

@@ -1,7 +1,7 @@
 #include "server.h"
 #include "client.h"
 #include <fcntl.h>
-#include <signal.h>
+#include <pthread.h>
 #include <string.h>
 
 #include <stdio.h>
@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "common.h"
+#include "ctl.h"
 
 #if defined(_WIN32) || defined(_WIN64)
     #include <winsock2.h>
@@ -63,253 +64,194 @@ int process_command(Server *server, int socketfd) {
     usleep(1000);
     printf("Received command %s\n", ctltostr[command.type]);
     if (command.type == CTL_KILL) return 1;
-    server->ctl_handlers[command.type](server, command);
+    server->ctl_handlers[command.type](server, &command);
     return 0;
 }
 
-int none_command(Server *server, CtlCommand command) {
+int none_command(Server *server, CtlCommand* command) {
     return 0;
 }
 
-int list_devices(Server *server, CtlCommand command) {
+int list_devices(Server *server, CtlCommand* command) {
     printf("\n");
-    if (server->num_senders == 0) {
-        printf("There are 0 senders\n");
-    }
-    printf("Device Senders:\n");
+    printf("Senders:\n");
+    pthread_mutex_lock(server->sender_mutex);
     for (int i = 0; i < MAX_SENDERS; i++) {
-        if (server->sender_ids[i] != 0) {
-            printf("id: %d, name: %s\n", server->sender_ids[i],
-                    server->sender_names[i]);
+        if (server->sender_flags[i] != 0) {
+            printf("id: %d, name: %s\n", server->sender_flags[i], server->sender_names[i]);
         }
     }
+    pthread_mutex_unlock(server->sender_mutex);
+
+    int num_listeners = 0;
+    pthread_mutex_lock(server->listener_mutex);
+    for (int i = 0; i < MAX_LISTENERS; i++) {
+        if (server->listen_flags[i] != 0) {
+            num_listeners++;
+        }
+    }
+    pthread_mutex_unlock(server->listener_mutex);
+    printf("There are %d listeners\n", num_listeners);
+
     printf("\n");
     return 0;
 }
 
-int add_device(Server *server, CtlCommand command) {
-    if (server->num_senders >= MAX_SENDERS) {
-        fprintf(stderr, "Error: devices at max capacity\n");
+int add_device(Server *server, CtlCommand* command) {
+    DeviceName* name = &command->name;
+    ConnInfo* conn = &command->conn;
+
+    int dfd = open(name->device, O_RDONLY | O_NONBLOCK);
+    if (dfd < 0) {
+        fprintf(stderr, "error unable to open for reading %s\n", name->device);
+        perror("Error:");
+        pthread_exit(NULL);
+    }
+    printf("Opened device: %s\n", name->device);
+
+    printf("Creating sender to %s:%d\n", conn->ip, conn->port);
+    // Create the file descriptor
+    int cfd;
+    if ((cfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        printf("Socket creation error");
         return -1;
     }
 
-#ifdef __unix__
-    int pid = fork();
-    if (pid < 0) {
-        perror("Error creating fork");
-        return -1;
-    }
-
-    if (pid == 0) {
-        close(server->fd);
-        create_input_sender(command.device, command.ip, command.port, 0, NULL);
-        exit(1);
-    } else {
-        // TODO check for connection to port first
-        for (int i = 0; i < MAX_SENDERS; i++) {
-            if (server->sender_ids[i] == 0) {
-                server->sender_ids[i] = pid;
-                strncpy(server->sender_names[i], command.device, MAX_NAME_LENGTH);
-                server->num_senders++;
-                break;
-            }
-        }
-        printf("Added sender with id %d and name %s\n", pid, command.device);
-    }
-#endif
-
-    return 0;
-}
-
-// adds a device that removes itself if a binding is pressed
-int add_binding(Server *server, CtlCommand command) {
-    if (server->num_senders >= MAX_SENDERS) {
-        fprintf(stderr, "Error: devices at max capacity\n");
-        return -1;
-    }
-
-#ifdef __unix__
-    int pid = fork();
-    if (pid < 0) {
-        perror("Error creating fork");
-        return -1;
-    }
-
-    if (pid == 0) {
-        close(server->fd);
-        int binds[] = {KEY_LEFTMETA, KEY_LEFTSHIFT, KEY_COMMA};
-        create_input_sender(command.device, command.ip, command.port, 3, binds);
-        exit(1);
-    } else {
-        // TODO check for connection to port first
-        for (int i = 0; i < MAX_SENDERS; i++) {
-            if (server->sender_ids[i] == 0) {
-                server->sender_ids[i] = pid;
-                strncpy(server->sender_names[i], command.device, MAX_NAME_LENGTH);
-                server->num_senders++;
-                break;
-            }
-        }
-        printf("Added sender with id %d and name %s\n", pid, command.device);
-    }
-#endif
-    return 0;
-}
-
-int rm_device(Server *server, CtlCommand command) {
-    if (server->num_senders == 0) {
-        fprintf(stderr, "No devices to remove\n");
-        return -1;
-    }
-
-    for (int i = 0; i < MAX_SENDERS; i++) {
-        int sender_pid = server->sender_ids[i];
-        if (sender_pid == 0) {
-            continue;
-        }
-        char *name = server->sender_names[i];
-        if (strcmp(name, command.device) == 0) {
-            printf("Removing device %s with pid %d\n", name, sender_pid);
-            server->sender_ids[i] = 0;
-            server->num_senders--;
-#ifdef __unix__
-            kill(sender_pid, SIGKILL);
-#else
-#endif
-            return 0;
-        }
-    }
-    printf("Could not find specified device\n");
-    return 0;
-}
-
-// creates a new input device on the servers system that listens from socketfd
-// maybe make this threaded instead of forked
-// ALSO ABSTRACT AWAY THE INPUT DEVICE
-int create_input_listener(int socketfd) {
-#ifdef __linux__
-    struct uinput_setup usetup;
-    int uin_fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
-    /*
-     * The ioctls below will enable the device that is about to be
-     * created, to pass key events, in this case the space key.
-     */
-    ioctl(uin_fd, UI_SET_EVBIT, EV_KEY);
-    for (int i = 0; i < KEY_COMPOSE; i++) {
-        ioctl(uin_fd, UI_SET_KEYBIT, i);
-    }
-
-    // touchpad not working???
-    ioctl(uin_fd, UI_SET_EVBIT, EV_KEY);
-    ioctl(uin_fd, UI_SET_KEYBIT, BTN_LEFT);
-    ioctl(uin_fd, UI_SET_KEYBIT, BTN_RIGHT);
-    ioctl(uin_fd, UI_SET_EVBIT, EV_REL);
-    ioctl(uin_fd, UI_SET_RELBIT, REL_X);
-    ioctl(uin_fd, UI_SET_RELBIT, REL_Y);
-    ioctl(uin_fd, UI_SET_KEYBIT, BTN_MIDDLE);
-
-    memset(&usetup, 0, sizeof(usetup));
-    usetup.id.bustype = BUS_USB;
-    usetup.id.vendor = 0x1234;  /* sample vendor */
-    usetup.id.product = 0x5678; /* sample product */
-    strcpy(usetup.name, "IOswitch Device");
-
-    ioctl(uin_fd, UI_DEV_SETUP, &usetup);
-    ioctl(uin_fd, UI_DEV_CREATE);
-
-    struct input_event ie = {0};
-    while (1) {
-
-        ssize_t read_bytes = read(socketfd, &ie, sizeof(struct input_event));
-        if (read_bytes == sizeof(struct input_event)) {
-
-            write(uin_fd, &ie, sizeof(struct input_event));
-        } else if (read_bytes <= 0) {
-            return -1;
-        }
-    }
-    printf("Client disconnected\n");
-    ioctl(uin_fd, UI_DEV_DESTROY);
-    close(uin_fd);
-#else
-    printf("input listener for windows\n");
-#endif
-
-    return 0;
-}
-
-int create_input_sender(char *device, char *ip, unsigned int port, int num_binds, int* binds) {
-    printf("Creating sender to %s:%d\n", ip, port);
-#ifdef __unix__
-    int fd = open(device, O_RDONLY | O_NONBLOCK);
-    if (fd < 0) {
-        fprintf(stderr, "error unable to open for reading %s\n", device);
-        return -1;
-    }
-    printf("Opened device: %s\n", device);
-
-    // Connect the client to the server
-    Client client = {0};
-    client.num_binds = num_binds;
-    client.binds = binds;
-    client.binds_buf = malloc(client.num_binds * sizeof(int));
-
-    if ((client.fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        printf("\n Socket creation error \n");
-        return -1;
-    }
-
-    if (connect_to_server(client, ip, port) < 0) {
+    // connect to the server
+    if (connect_to_server(cfd, conn->ip, conn->port) < 0) {
         perror("Error connecting to server");
         return -1;
     }
 
     SocketType type = INPUT_CONN;
-    if (send(client.fd, &type, sizeof(SocketType), 0) < 0) {
+    if (send(cfd, &type, sizeof(SocketType), 0) < 0) {
+        perror("Error Sending Conn Packet");
         return -1;
     }
 
     printf("Connected to server\n");
-    // set up for reading from /dev/input/eventX
-
-    int connected = 1;
-    printf("started sending...\n");
-    // i think it polls input events too fast so it messes things u
-    struct pollfd pfd;
-    pfd.fd = fd;
-    pfd.events = POLLIN;
-
-    while (connected) {
-        if (getppid() == 1) {
-            connected = 0;
+    
+    // Find open slot
+    int slot;
+    pthread_mutex_lock(server->sender_mutex);
+    for (slot = 0; slot < MAX_SENDERS; slot++) {
+        if (server->sender_flags[slot] == 0) {
             break;
         }
-        int res = send_input_event(pfd, client);
+    }
+    if (slot == MAX_SENDERS) {
+        printf("At Max Capacity for Senders (%d)\n", MAX_SENDERS);
+        return -1;
+    }
+    server->sender_flags[slot] = slot + 1;
+    pthread_mutex_unlock(server->sender_mutex);
+    
+    strncpy(server->sender_names[slot], name->device, MAX_NAME_LENGTH);
+    // Create the sender thread
+    SenderArgs* args = malloc(sizeof(SenderArgs));
+    args->dfd = dfd;
+    args->cfd = cfd;
+    const char* binds[] = {"LEFTMETA", "LEFTSHIFT", "COMMA"};
+    args->num_keys = 3;
+    args->keybind = malloc(args->num_keys * sizeof(int));
+    for (int i = 0; i < args->num_keys; i++) {
+        args->keybind[i] = str_to_key(binds[i]);
+    }
+    args->flag = &server->sender_flags[slot];
+    args->mut_ptr = server->sender_mutex;
+
+    pthread_create(&server->sender_handles[slot], NULL, &spawn_sender_thread, (void*) args);
+    pthread_detach(server->sender_handles[slot]);
+    printf("Added sender for device %s\n", name->device);
+
+    return 0;
+}
+
+int rm_device(Server *server, CtlCommand* command) {
+    DeviceName* dev_name = &command->name;
+    pthread_mutex_lock(server->sender_mutex);
+    for (int i = 0; i < MAX_SENDERS; i++) {
+        if (server->sender_flags[i] != 0) {
+            char *name = server->sender_names[i];
+            if (strcmp(name, dev_name->device) == 0) {
+                printf("Removing device %s with id %d\n", name, i);
+                server->sender_flags[i] = 0;
+                pthread_mutex_unlock(server->sender_mutex);
+                return 0;
+            }
+        }
+    }
+    pthread_mutex_unlock(server->sender_mutex);
+    printf("Could not find specified device\n");
+    return 0;
+}
+
+// creates a new input device on the servers system that listens from socketfd
+// ALSO ABSTRACT AWAY THE INPUT DEVICE
+void* spawn_listener_thread(void* listener_args) {
+    ListenerArgs* args = (ListenerArgs*) listener_args;
+    int socketfd = args->newsockfd;
+    pthread_mutex_t* mutex = args->mut_ptr;
+    int* flag = args->flag;
+
+    Listener* listener = create_listenera(args);
+
+    struct input_event ie = {0};
+    while (1) {
+        ssize_t read_bytes = read(socketfd, &ie, sizeof(struct input_event));
+        if (read_bytes == sizeof(struct input_event)) {
+            write(listener->virtdevfd, &ie, sizeof(struct input_event));
+        } else if (read_bytes <= 0) {
+            break;
+        }
+    }
+
+    pthread_mutex_lock(mutex);
+    *flag = 0;
+    pthread_mutex_unlock(mutex);
+
+    destroy_listener(listener);
+    free(listener_args);
+
+    pthread_exit(NULL);
+}
+
+void* spawn_sender_thread(void* sender_args) {
+    SenderArgs* args = (SenderArgs*) sender_args;
+    Sender* sender = create_sendera(args);
+
+    printf("started sending...\n");
+    int connected = 1;
+    int unbound = 0;
+    while (connected) {
+        int res = send_input_event(sender);
         if (res == 1) {
             printf("Received keybind inputs\n");
             connected = 0;
+            unbound = 1;
         }
+
+        pthread_mutex_lock(args->mut_ptr);
+        if (*(args->flag) == 0) {
+            connected = 0;
+        }
+        pthread_mutex_unlock(args->mut_ptr);
 
         if (res < 0) {
             fprintf(stderr, "Error occured, closing\n");
             connected = 0;
         }
     }
-    // closing the connected socket
-    free(client.binds_buf);
-    close(client.fd);
 
-    if (client.num_binds == 0) return 0;
+    printf("stopped device\n");
 
-    char *const * args = { NULL };
-    int pid = fork();
-    if (pid == 0) {
-        execvp("ioswitchstop", args);
-        exit(1);
-    }
-#else
-    printf("Creating input sender for windows\n");
-#endif
+    if (unbound) {
+        printf("\nrunning stop script\n");
+        system("ioswitchstop");
+    };
 
-    return 0;
+    destroy_sender(sender);
+    free(sender_args);
+
+    pthread_exit(NULL);
 }

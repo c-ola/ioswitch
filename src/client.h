@@ -1,24 +1,53 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
+#include "common.h"
+
+#ifdef __linux__
+#include <linux/uinput.h>
+#elif defined(WIN32) || defined(WIN64)
+#endif
+
 #ifdef __unix__
     #include <sys/poll.h>
-#else 
+#elif defined(WIN32) || defined(WIN64)
     #include <winsock2.h>
 #endif
 
-typedef struct _client {
-    int fd;
-    int status;
-    int* binds;
-    int* binds_buf;
-    int num_binds;
-} Client;
+#ifdef __unix__
+typedef struct pollfd device_reader;
+#elif defined(WIN32) || defined(WIN64)
+typedef int device_reader;
+#endif
 
-int connect_to_server(Client client, const char *ip, unsigned int port);
+typedef struct _Sender {
+    int sockfd;
+    device_reader devfd;
+    int* keybind;
+    int* keybind_buf;
+    int num_keys;
+} Sender;
 
-// sends an input event from the specified device
-// returns -1 on error
-int send_input_event(struct pollfd pfd, Client client);
+Sender* create_senderv(int sockfd, device_reader devfd, int* keybind, int num_keys);
+Sender* create_sendera(SenderArgs* args);
+void destroy_sender(Sender* sender);
+
+int connect_to_server(int fd, const char *ip, unsigned int port);
+int send_input_event(Sender* sender);
+
+#ifdef __linux__
+typedef struct uinput_setup vdev_setup;
+#elif defined(WIN32) || defined(WIN64)
+typedef int vdevdev_setup;
+#endif
+
+typedef struct _Listener {
+    int sockfd;
+    int virtdevfd;
+    vdev_setup dev_setup;
+} Listener;
+
+Listener* create_listenera(ListenerArgs* args);
+void destroy_listener(Listener* listener);
 
 #endif
