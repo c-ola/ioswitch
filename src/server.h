@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
+#include "tokenizer/tokenizer.h"
 
 #ifdef __unix__
     #include <netinet/in.h>
@@ -30,7 +31,6 @@ typedef enum {
     MESSAGE,
 } SocketType;
 
-
 typedef struct Server Server;
 
 typedef int (*CtlCommHandler)(Server* server, CtlCommand* command);
@@ -40,6 +40,8 @@ typedef struct Server {
     int opt;
     struct sockaddr_in address;
     socklen_t addrlen;
+
+    Tokenizer config;
     
     int* listen_flags; // shared array of flags
     pthread_mutex_t* listener_mutex;
@@ -52,6 +54,9 @@ typedef struct Server {
 
     CtlCommHandler ctl_handlers[CTL_ENUM_LENGTH];
 } Server;
+
+Server* create_server();
+void destroy_server(Server* server);
 
 int start_server(Server* server, int port);
 int process_command(Server* server, int socketfd);

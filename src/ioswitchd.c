@@ -53,30 +53,16 @@ int main (int argc, char** argv) {
 
     // Server that handles receiving input and emitting to the computer
     // Can also receive messages that tell it to start a new sender
-    Server server = { 0 };
-    server.ctl_handlers[CTL_NONE] = none_command;
-    server.ctl_handlers[CTL_LIST] = list_devices;
-    server.ctl_handlers[CTL_RM_DEVICE] = rm_device;
-    server.ctl_handlers[CTL_ADD_DEVICE] = add_device;
-    //server.ctl_handlers[CTL_ADD_BINDING] = add_binding;
-    server.listener_mutex = malloc(sizeof(pthread_mutex_t));
-    server.sender_mutex = malloc(sizeof(pthread_mutex_t));
-    *server.listener_mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
-    *server.sender_mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
-    server.sender_flags = malloc(MAX_SENDERS * sizeof(int));
-    server.listen_flags = malloc(MAX_LISTENERS * sizeof(int));
-
-    memset(server.listen_flags, 0, MAX_LISTENERS * sizeof(int));
-    memset(server.sender_flags, 0, MAX_SENDERS * sizeof(int));
+    Server* server = create_server();
     
-    if (start_server(&server, port)){
+    if (start_server(server, port)){
         fprintf(stderr, "Could not start Server\n");
         return -1;
     }
 
     printf("Started Server on port %d\n", port);
 
-    if (listen(server.fd, 5) < 0) {
+    if (listen(server->fd, 5) < 0) {
         perror("Error listening for connections");
         return -1;
     }
@@ -84,7 +70,7 @@ int main (int argc, char** argv) {
     int running = 1; 
     while (running) {
         int newsockfd;
-        if ((newsockfd = accept(server.fd, (struct sockaddr*)&server.address, &server.addrlen)) < 0) {
+        if ((newsockfd = accept(server->fd, (struct sockaddr*)&server->address, &server->addrlen)) < 0) {
             perror("accept");
             return -1;
         }
@@ -106,18 +92,18 @@ int main (int argc, char** argv) {
                 {
                     int num_listeners = 0;
                     for (int i = 0; i < MAX_LISTENERS; i++) {
-                        if (server.listen_flags[i] == 0) {
+                        if (server->listen_flags[i] == 0) {
                             printf("Server: New client connected\n");
                             ListenerArgs* args = malloc(sizeof(ListenerArgs));
                             args->newsockfd = newsockfd;
-                            args->flag = &server.listen_flags[i];
-                            args->mut_ptr = server.listener_mutex;
+                            args->flag = &server->listen_flags[i];
+                            args->mut_ptr = server->listener_mutex;
 
-                            pthread_mutex_lock(server.listener_mutex);
-                            server.listen_flags[i] = 1;
-                            pthread_mutex_unlock(server.listener_mutex);
-                            pthread_create(&server.listen_handles[i], NULL, &spawn_listener_thread, (void*)args);
-                            pthread_detach(server.listen_handles[i]);
+                            pthread_mutex_lock(server->listener_mutex);
+                            server->listen_flags[i] = 1;
+                            pthread_mutex_unlock(server->listener_mutex);
+                            pthread_create(&server->listen_handles[i], NULL, &spawn_listener_thread, (void*)args);
+                            pthread_detach(server->listen_handles[i]);
                             printf("Created new input listener\n");
                             break;
                         } else {
@@ -133,7 +119,7 @@ int main (int argc, char** argv) {
             case MESSAGE:
                 printf("\n");
                 printf("Server: received ctl message\n");
-                int res = process_command(&server, newsockfd);
+                int res = process_command(server, newsockfd);
                 if (res == 1) {
                     running = 0;
                 }
@@ -147,20 +133,8 @@ int main (int argc, char** argv) {
 
     }
 
-    pthread_mutex_lock(server.listener_mutex);
-    for (int i = 0; i < MAX_LISTENERS; i++) {
-        if (server.listen_flags[i] != 0) {
-            pthread_cancel(server.listen_handles[i]);
-        }
-    }
-    pthread_mutex_unlock(server.listener_mutex);
-    
-    free(server.sender_mutex);
-    free(server.sender_flags);
-    free(server.listener_mutex);
-    free(server.listen_flags);
+    destroy_server(server);
 
-    CLOSESOCK(server.fd);
     printf("exited\n");
     return 0;
 }

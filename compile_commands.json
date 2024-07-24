@@ -5,6 +5,9 @@
       "-c",
       "-g",
       "-Wall",
+      "-fsanitize=address",
+      "-fno-omit-frame-pointer",
+      "-O1",
       "-o",
       "build/ioswitchd",
       "src/ioswitchd.c"
@@ -19,6 +22,9 @@
       "-c",
       "-g",
       "-Wall",
+      "-fsanitize=address",
+      "-fno-omit-frame-pointer",
+      "-O1",
       "-o",
       "build/ioswitchd",
       "src/client.c"
@@ -33,6 +39,9 @@
       "-c",
       "-g",
       "-Wall",
+      "-fsanitize=address",
+      "-fno-omit-frame-pointer",
+      "-O1",
       "-o",
       "build/ioswitchd",
       "src/server.c"
@@ -47,6 +56,9 @@
       "-c",
       "-g",
       "-Wall",
+      "-fsanitize=address",
+      "-fno-omit-frame-pointer",
+      "-O1",
       "-o",
       "build/ioswitchd",
       "src/ctl.c"
@@ -61,6 +73,43 @@
       "-c",
       "-g",
       "-Wall",
+      "-fsanitize=address",
+      "-fno-omit-frame-pointer",
+      "-O1",
+      "-o",
+      "build/ioswitchd",
+      "src/common.c"
+    ],
+    "directory": "/home/nikola/programming/ioswitch",
+    "file": "/home/nikola/programming/ioswitch/src/common.c",
+    "output": "/home/nikola/programming/ioswitch/build/ioswitchd"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-Wall",
+      "-fsanitize=address",
+      "-fno-omit-frame-pointer",
+      "-O1",
+      "-o",
+      "build/ioswitchd",
+      "src/tokenizer/tokenizer.c"
+    ],
+    "directory": "/home/nikola/programming/ioswitch",
+    "file": "/home/nikola/programming/ioswitch/src/tokenizer/tokenizer.c",
+    "output": "/home/nikola/programming/ioswitch/build/ioswitchd"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-Wall",
+      "-fsanitize=address",
+      "-fno-omit-frame-pointer",
+      "-O1",
       "-o",
       "build/ioswitchctl",
       "src/ioswitchctl.c"
@@ -75,6 +124,9 @@
       "-c",
       "-g",
       "-Wall",
+      "-fsanitize=address",
+      "-fno-omit-frame-pointer",
+      "-O1",
       "-o",
       "build/ioswitchctl",
       "src/client.c"
@@ -89,12 +141,49 @@
       "-c",
       "-g",
       "-Wall",
+      "-fsanitize=address",
+      "-fno-omit-frame-pointer",
+      "-O1",
       "-o",
       "build/ioswitchctl",
       "src/ctl.c"
     ],
     "directory": "/home/nikola/programming/ioswitch",
     "file": "/home/nikola/programming/ioswitch/src/ctl.c",
+    "output": "/home/nikola/programming/ioswitch/build/ioswitchctl"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-Wall",
+      "-fsanitize=address",
+      "-fno-omit-frame-pointer",
+      "-O1",
+      "-o",
+      "build/ioswitchctl",
+      "src/common.c"
+    ],
+    "directory": "/home/nikola/programming/ioswitch",
+    "file": "/home/nikola/programming/ioswitch/src/common.c",
+    "output": "/home/nikola/programming/ioswitch/build/ioswitchctl"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-Wall",
+      "-fsanitize=address",
+      "-fno-omit-frame-pointer",
+      "-O1",
+      "-o",
+      "build/ioswitchctl",
+      "src/tokenizer/tokenizer.c"
+    ],
+    "directory": "/home/nikola/programming/ioswitch",
+    "file": "/home/nikola/programming/ioswitch/src/tokenizer/tokenizer.c",
     "output": "/home/nikola/programming/ioswitch/build/ioswitchctl"
   }
 ]

@@ -14,8 +14,8 @@ else
 	FLAGS := $(FLAGS) -fsanitize=address -fno-omit-frame-pointer -O1
 endif
 
-DAEMON_SRC_FILES = src/client.c src/server.c src/ctl.c src/common.c
-CTL_SRC_FILES = src/client.c src/ctl.c src/common.c
+DAEMON_SRC_FILES = src/client.c src/server.c src/ctl.c src/common.c src/tokenizer/tokenizer.c
+CTL_SRC_FILES = src/client.c src/ctl.c src/common.c src/tokenizer/tokenizer.c
 
 all: daemon ctl
 
@@ -30,6 +30,7 @@ install: all
 	cp ioswitchstop /usr/local/bin/
 	cp build/ioswitchctl /usr/local/bin/
 	cp build/ioswitchd /usr/local/bin/
+
 
 clean:
 	rm build/ioswitchd build/ioswitchctl

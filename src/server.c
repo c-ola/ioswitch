@@ -23,6 +23,42 @@
 #endif
 
 
+Server* create_server() {
+    Server* server = malloc(sizeof(Server));
+    server->ctl_handlers[CTL_NONE] = none_command;
+    server->ctl_handlers[CTL_LIST] = list_devices;
+    server->ctl_handlers[CTL_RM_DEVICE] = rm_device;
+    server->ctl_handlers[CTL_ADD_DEVICE] = add_device;
+    server->config = load_tokens("./config");
+    server->listener_mutex = malloc(sizeof(pthread_mutex_t));
+    server->sender_mutex = malloc(sizeof(pthread_mutex_t));
+    *server->listener_mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+    *server->sender_mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+    server->sender_flags = malloc(MAX_SENDERS * sizeof(int));
+    server->listen_flags = malloc(MAX_LISTENERS * sizeof(int));
+    memset(server->listen_flags, 0, MAX_LISTENERS * sizeof(int));
+    memset(server->sender_flags, 0, MAX_SENDERS * sizeof(int));
+    return server;
+}
+
+void destroy_server(Server *server) {
+    pthread_mutex_lock(server->listener_mutex);
+    for (int i = 0; i < MAX_LISTENERS; i++) {
+        if (server->listen_flags[i] != 0) {
+            pthread_cancel(server->listen_handles[i]);
+        }
+    }
+    pthread_mutex_unlock(server->listener_mutex);
+    
+    free(server->sender_mutex);
+    free(server->sender_flags);
+    free(server->listener_mutex);
+    free(server->listen_flags);
+
+    CLOSESOCK(server->fd);
+    free(server);
+}
+
 int start_server(Server *server, int port) {
 
     CREATE_SOCKET(server->fd);
@@ -151,12 +187,15 @@ int add_device(Server *server, CtlCommand* command) {
     SenderArgs* args = malloc(sizeof(SenderArgs));
     args->dfd = dfd;
     args->cfd = cfd;
-    const char* binds[] = {"LEFTMETA", "LEFTSHIFT", "COMMA"};
-    args->num_keys = 3;
+    
+    Values* binds_toks = get_variable(server->config, "key_binds");
+    args->num_keys = binds_toks->num_values;
     args->keybind = malloc(args->num_keys * sizeof(int));
     for (int i = 0; i < args->num_keys; i++) {
-        args->keybind[i] = str_to_key(binds[i]);
+        args->keybind[i] = str_to_key(binds_toks->tokens[i].val);
     }
+    free(binds_toks);
+
     args->flag = &server->sender_flags[slot];
     args->mut_ptr = server->sender_mutex;
 

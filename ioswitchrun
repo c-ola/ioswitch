@@ -1,24 +1,7 @@
 #!/bin/bash
-ip="192.168.2.37"
-target_port=8080
-local_port=8080
-num_devices=2
-devices=("/dev/input/event9" "/dev/input/event10")
-xid=(15 12 13 16)
-num_ids=(1 3)
-base_idx=0
-commands=("add" "add")
-
-for i in $(seq 0 $(($num_devices - 1))); do
-    echo " "
-    echo "executing ${commands[i]} for ${devices[i]}"
-    ioswitchctl -i ${ip} -d ${devices[i]} -p ${target_port} -l ${local_port} -t ${commands[i]}
-    if [[ $? -eq 0 ]]; then
-        for (( j = 0; j < ${num_ids[i]}; j++)); do
-            real_idx=$(($j + $base_idx))
-            echo "device id: ${xid[$real_idx]}"
-            xinput disable ${xid[real_idx]}
-        done
-    fi
-    base_idx=$(($base_idx + ${num_ids[i]}))
+xid=(11 12 13 16)
+ioswitchctl -t add
+for i in ${xid[@]}; do
+    echo "device id: $i"
+    xinput disable ${i}
 done
