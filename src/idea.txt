@@ -1,0 +1,10 @@
+Make a protocol for the packets sent over the input stream might make it easier to implement on windows.
+Would probably still involve rewriting everything for windows.
+
+Daemon
+    - listen for keys from another system and output them on the current system
+    - Send device input stream to another device
+    - listen for
+    - lock focus of current system to a blank window, unlocked by a configurated keystroke
+
+

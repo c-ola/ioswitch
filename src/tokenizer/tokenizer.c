@@ -13,6 +13,7 @@ void print_token(Token tok) {
 
 Tokenizer load_tokens(const char* file_name) {
     Tokenizer tz = { 0 };
+    printf("%s\n", file_name);
     
     FILE* file = fopen(file_name, "r");
     

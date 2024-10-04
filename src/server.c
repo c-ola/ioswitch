@@ -29,7 +29,12 @@ Server* create_server() {
     server->ctl_handlers[CTL_LIST] = list_devices;
     server->ctl_handlers[CTL_RM_DEVICE] = rm_device;
     server->ctl_handlers[CTL_ADD_DEVICE] = add_device;
-    server->config = load_tokens("./config");
+
+    char config_path[256];
+    strcat(strcpy(config_path, getenv("HOME")), "/.config/ioswitch/config");
+    printf("Config: %s\n", config_path);
+
+    server->config = load_tokens(config_path);
     server->listener_mutex = malloc(sizeof(pthread_mutex_t));
     server->sender_mutex = malloc(sizeof(pthread_mutex_t));
     *server->listener_mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;

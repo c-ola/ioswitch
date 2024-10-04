@@ -1,5 +1,8 @@
 ## IOswitch
 
+SHOULD CONVERT TO SOMETHING SIMILAR TO THE i3lock https://github.com/i3/i3lock/blob/main/i3lock.c IMPLEMENTATION FOR STEALING FOCUS
+
+
 Sends input from one computer to another via a TCP server (i.e. send desktop mouse input to laptop).
 
 The daemon is capable of both sending and receiving inputs. It is controlled through the command line.

@@ -7,7 +7,7 @@ StartLimitIntervalSec=0
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=/home/nikola/.Xauthority
 Type=simple
-Restart=always
+Restart=no
 User=nikola
 ExecStart=/usr/bin/env /usr/local/bin/ioswitchd -p 8080
 
