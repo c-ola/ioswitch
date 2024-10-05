@@ -1,4 +1,5 @@
 #include "util.h"
+#include "server.h"
 #include <arpa/inet.h>
 #include <linux/input.h>
 #include <string.h>
@@ -46,27 +47,25 @@ int connect_to_server(int fd, const char *ip, unsigned int port) {
 }
 
 // returns 1 if binds have all been pressed
-int send_input_event(struct pollfd* devfd, int dest_sock_fd) {
+int send_input_event(int id, struct pollfd* devfd, int dest_sock_fd) {
+    InputPacket packet = { 0 };
     // timeout should probably be a couple of milliseconds to not block everything
-    struct input_event ie = { 0 };
-
-    int ret = poll(devfd, 1, -1);
+    int ret = poll(devfd, 1, 10);
     if (ret < 0) {
         printf("timeout\n");
-        return -1;
+        //return -1;
     }
-    if (!devfd->revents) {
-        printf("error somehow\n");
-        return -1;
+    if (!(devfd->revents & POLLIN)) {
+        printf("Nothing to Send\n");
+        return 0;
     }
-
-    ssize_t r = read(devfd->fd, (void *)&ie, sizeof(struct input_event));
+    ssize_t r = read(devfd->fd, (void *)&packet.ie, sizeof(struct input_event));
     if (r < 0) {
         perror("error reading device");
         return -1;
     }
-
-    if (send(dest_sock_fd, &ie, sizeof(struct input_event), 0) <= 0) {
+    packet.dev_id = id;
+    if (send(dest_sock_fd, &packet, sizeof(InputPacket), 0) <= 0) {
         perror("failed to send message");
         return -1;
     }

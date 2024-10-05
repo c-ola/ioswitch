@@ -13,6 +13,40 @@
 #include "tokenizer/tokenizer.h"
 #include "util.h"
 
+Server* create_server(const char* config_path){
+    Server* server = malloc(sizeof(Server));
+    memset(server, 0, sizeof(Server));
+    server->config = load_config(config_path);
+    // initialize commands table
+    server->commands[NONE] = none;
+    server->commands[LIST] = list;
+    server->commands[START] = start;
+    server->commands[STOP] = stop;
+    server->commands[SWITCH] = switch_state;
+    server->commands[RELOAD] = reload;
+    server->commands[KILL] = kill;
+
+    // Listener Mutex
+    server->listener_mutex = malloc(sizeof(pthread_mutex_t));
+    *server->listener_mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+
+    server->sending = malloc(sizeof(int));
+    *server->sending = 0;
+    server->sender_mutex = malloc(sizeof(pthread_mutex_t));
+    *server->sender_mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+    return server;
+}
+
+void destroy_server(Server* server) {
+    free(server->listener_mutex);
+
+    close(server->socket);
+    free(server->sending);
+    free(server->config);
+    free(server->sender_mutex);
+    free(server);
+}
+
 int start_server(Server* server, int port) {
     if ((server->socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {\
         perror("Socket creation error");
@@ -50,35 +84,6 @@ int run_server(Server* server) {
         return -1;
     }
 
-
-    int uinput_fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
-
-    ioctl(uinput_fd, UI_SET_EVBIT, EV_KEY);
-    for (int i = 0; i < KEY_COMPOSE; i++) {
-        ioctl(uinput_fd, UI_SET_KEYBIT, i);
-    }
-
-    // touchpad not working???
-    ioctl(uinput_fd, UI_SET_EVBIT, EV_KEY);
-    ioctl(uinput_fd, UI_SET_KEYBIT, BTN_LEFT);
-    ioctl(uinput_fd, UI_SET_KEYBIT, BTN_RIGHT);
-    ioctl(uinput_fd, UI_SET_EVBIT, EV_REL);
-    ioctl(uinput_fd, UI_SET_RELBIT, REL_X);
-    ioctl(uinput_fd, UI_SET_RELBIT, REL_Y);
-    ioctl(uinput_fd, UI_SET_KEYBIT, BTN_MIDDLE);
-
-    struct uinput_setup dev_setup;
-    memset(&dev_setup, 0, sizeof(dev_setup));
-    dev_setup.id.bustype = BUS_USB;
-    dev_setup.id.vendor = 0x6969;
-    dev_setup.id.product = 0x0420;
-    strcpy(dev_setup.name, "IOswitch Device");
-
-    ioctl(uinput_fd, UI_DEV_SETUP, &dev_setup);
-    ioctl(uinput_fd, UI_DEV_CREATE);
-    struct input_event ie = { 0 };
-    ssize_t read_bytes;
-
     int running = 1; 
     while (running) {
         int new_sock_fd;
@@ -96,9 +101,31 @@ int run_server(Server* server) {
 
         switch (conn.type) {
             case INPUT_STREAM:
-                read_bytes = read(new_sock_fd, &ie, sizeof(struct input_event));
-                if (read_bytes == sizeof(struct input_event)) {
-                    write(uinput_fd, &ie, sizeof(struct input_event));
+                {
+                    if (server->num_conns >= MAX_CONNECTIONS) {
+                        break;
+                    }
+                    int open_slot = 0;
+                    pthread_mutex_lock(server->listener_mutex);
+                    for (int i = 0; i < server->num_conns; i++) {
+                        if (server->connections[i] == 0) {
+                            open_slot = i;
+                        }
+                    }
+                    ListenerArgs* args = malloc(sizeof(ListenerArgs));
+                    args->sockfd = new_sock_fd;
+                    args->num_devices = conn.num_devices;
+                    args->mutex = server->listener_mutex;
+                    args->connection = &server->connections[open_slot];
+                    for (int i = 0; i < conn.num_devices; i++) {
+                        args->devices[i] = create_device(new_sock_fd, conn.device_names[i]);
+                    }
+                    pthread_mutex_unlock(server->listener_mutex);
+
+                    pthread_create(&server->listener_handle[open_slot], NULL, &spawn_listener_thread, args);
+                    pthread_detach(server->listener_handle[open_slot]);
+                    server->num_conns++;
+                    printf("Main: Created Listener thread\n");
                 }
                 break;
             case COMMAND:
@@ -123,41 +150,47 @@ int run_server(Server* server) {
 
     }
 
-
-    ioctl(uinput_fd, UI_DEV_DESTROY);
-    close(uinput_fd);
     return 0;
 }
 
-Server* create_server(const char* config_path){
-    Server* server = malloc(sizeof(Server));
-    memset(server, 0, sizeof(Server));
-    server->config = load_config(config_path);
-    // initialize commands table
-    server->commands[NONE] = none;
-    server->commands[LIST] = list;
-    server->commands[START] = start;
-    server->commands[STOP] = stop;
-    server->commands[SWITCH] = switch_state;
-    server->commands[RELOAD] = reload;
-    server->commands[KILL] = kill;
+VirtualDevice create_device(int sockfd, const char* name) {
+    VirtualDevice dev = {
+        .sockfd = sockfd,
+    }; 
+    dev.devfd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+    strcpy(dev.name, name);
+    
+    ioctl(dev.devfd, UI_SET_EVBIT, EV_KEY);
+    for (int i = 0; i < KEY_COMPOSE; i++) {
+        ioctl(dev.devfd, UI_SET_KEYBIT, i);
+    }
 
-    server->sending = malloc(sizeof(int));
-    *server->sending = 0;
-    server->sender_mutex = malloc(sizeof(pthread_mutex_t));
-    *server->sender_mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
-    return server;
+    // touchpad not working???
+    ioctl(dev.devfd, UI_SET_EVBIT, EV_KEY);
+    ioctl(dev.devfd, UI_SET_KEYBIT, BTN_LEFT);
+    ioctl(dev.devfd, UI_SET_KEYBIT, BTN_RIGHT);
+    ioctl(dev.devfd, UI_SET_EVBIT, EV_REL);
+    ioctl(dev.devfd, UI_SET_RELBIT, REL_X);
+    ioctl(dev.devfd, UI_SET_RELBIT, REL_Y);
+    ioctl(dev.devfd, UI_SET_KEYBIT, BTN_MIDDLE);
+
+    memset(&dev.dev_setup, 0, sizeof(dev.dev_setup));
+    dev.dev_setup.id.bustype = BUS_USB;
+    dev.dev_setup.id.vendor = 0x6969;
+    dev.dev_setup.id.product = 0x0420;
+    strcpy(dev.dev_setup.name, "IOswitch Dev ");
+    strcat(dev.dev_setup.name, name);
+
+    ioctl(dev.devfd, UI_DEV_SETUP, &dev.dev_setup);
+    ioctl(dev.devfd, UI_DEV_CREATE);
+
+    return dev;
 }
 
-void destroy_server(Server* server) {
-    pthread_mutex_lock(server->sender_mutex);
-    pthread_mutex_unlock(server->sender_mutex);
-
-    close(server->socket);
-    free(server->sending);
-    free(server->config);
-    free(server->sender_mutex);
-    free(server);
+void destroy_device(VirtualDevice dev) {
+    printf("Client disconnected\n");
+    ioctl(dev.devfd, UI_DEV_DESTROY);
+    close(dev.devfd);
 }
 
 Config* load_config(const char* config_path) {
@@ -260,22 +293,6 @@ void* spawn_sender_thread(void* args) {
     pthread_mutex_t* mutex = ((SenderArgs*)args)->mutex;
     int* sending = ((SenderArgs*)args)->sending;
 
-    pthread_mutex_lock(mutex);
-    struct pollfd* device_fds = malloc(sizeof(struct pollfd)*config->num_devices);
-    for(int i = 0; i < config->num_devices; i++) {
-        char* name = config->device_names[i];
-        printf("Sending for device: %s\n", name);
-        device_fds[i].fd = open(config->device_names[i], O_RDONLY | O_NONBLOCK);
-        device_fds[i].events = POLLIN;
-        if (device_fds[i].fd < 0) {
-            fprintf(stderr, "error unable to open for reading %s", name);
-            perror("");
-            pthread_mutex_unlock(mutex);
-            pthread_exit(NULL);
-        }
-    }
-    pthread_mutex_unlock(mutex);
-
     // Create the file descriptor
     int fd;
     if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -294,26 +311,46 @@ void* spawn_sender_thread(void* args) {
 
     printf("Connected to Destination Daemon\n");
 
+    // Send initial packet
+    NewConnection conn = {
+        .type = INPUT_STREAM,
+        .num_devices = config->num_devices
+    };
+    pthread_mutex_lock(mutex);
+    struct pollfd* device_fds = malloc(sizeof(struct pollfd)*config->num_devices);
+    for(int i = 0; i < config->num_devices; i++) {
+        char* name = config->device_names[i];
+        printf("Sending for device: %s\n", name);
+        device_fds[i].fd = open(config->device_names[i], O_RDONLY | O_NONBLOCK);
+        device_fds[i].events = POLLIN;
+        strcpy(conn.device_names[i], name);
+        if (device_fds[i].fd < 0) {
+            fprintf(stderr, "error unable to open for reading %s", name);
+            perror("");
+            pthread_mutex_unlock(mutex);
+            pthread_exit(NULL);
+        }
+    }
+    pthread_mutex_unlock(mutex);
+
+    if (send(fd, &conn, sizeof(NewConnection), 0) < 0) {
+        perror("Error Sending Conn Packet");
+        pthread_exit(NULL);
+    }
+
     int connected = 1;
     while (connected) {
         pthread_mutex_lock(mutex);
-        for(int i = 0; i < config->num_devices; i++) {
-            // Send initial packet
-            NewConnection conn = {
-                .type = INPUT_STREAM,
-            };
-
-            if (send(fd, &conn, sizeof(NewConnection), 0) < 0) {
-                perror("Error Sending Conn Packet");
-                pthread_exit(NULL);
-            }
-            printf("here\n");
-            if (send_input_event(&device_fds[i], fd) < 0) {
+        int k = config->num_devices;
+        pthread_mutex_unlock(mutex);
+        for(int i = 0; i < k; i++) {
+            if (send_input_event(i, &device_fds[i], fd) < 0) {
                 fprintf(stderr, "Failed sending input event\n");
                 connected = 0;
             }
         }
-        if (!*sending) {
+        pthread_mutex_lock(mutex);
+        if (!(*sending)) {
             connected = 0;
         }
         pthread_mutex_unlock(mutex);
@@ -322,5 +359,34 @@ void* spawn_sender_thread(void* args) {
 
     free(args);
     free(device_fds);
+    pthread_exit(NULL);
+}
+
+void* spawn_listener_thread(void* listener_args) {
+    printf("Listener: Created\n");
+    ListenerArgs* args = (ListenerArgs*) listener_args;
+    pthread_mutex_t* mutex = args->mutex;
+    VirtualDevice* devices = args->devices;
+
+    InputPacket packet = {0};
+    while (1) {
+        ssize_t read_bytes = read(args->sockfd, &packet, sizeof(InputPacket));
+        VirtualDevice device = devices[packet.dev_id];
+        if (read_bytes == sizeof(InputPacket)) {
+            printf("device %d, %s\n", packet.dev_id, device.name);
+            write(device.devfd, &packet.ie, sizeof(struct input_event));
+        } else if (read_bytes <= 0) {
+            printf("Listener: Disconnected\n");
+            pthread_mutex_lock(mutex);
+            *(args->connection) = 0;
+            pthread_mutex_unlock(mutex);
+            break;
+        }
+    }
+
+
+    printf("Exiting Listener\n");
+    free(listener_args);
+
     pthread_exit(NULL);
 }

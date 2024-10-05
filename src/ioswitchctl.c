@@ -86,7 +86,6 @@ int send_command(CtlConfig config) {
 
     NewConnection conn = {
         .type = COMMAND,
-        .next_packet_size = sizeof(char)
     };
 
     // Tell the Daemon what kind of connection you're starting (it's always COMMAND from the CTL)

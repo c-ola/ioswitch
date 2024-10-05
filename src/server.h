@@ -3,6 +3,7 @@
 #include "tokenizer/tokenizer.h"
 #include <arpa/inet.h>
 #include <bits/pthreadtypes.h>
+#include <linux/uinput.h>
 #include <netinet/in.h>
 #include <stdatomic.h>
 #include <stdint.h>
@@ -14,6 +15,8 @@
 #include <netinet/ip.h>    //Provides declarations for ip header
 #include "commands.h"
 
+#define MAX_DEVICES 8 // the number of devices the 
+
 typedef enum ConnectionType {
     INPUT_STREAM,
     COMMAND 
@@ -21,13 +24,9 @@ typedef enum ConnectionType {
 
 typedef struct NewConnection {
     ConnectionType type;
-    ssize_t next_packet_size;
+    int num_devices;
+    char device_names[8][64];
 } NewConnection;
-
-
-typedef struct Sender {
-
-} Sender;
 
 
 typedef struct Config {
@@ -37,9 +36,33 @@ typedef struct Config {
     uint16_t num_devices;
 } Config;
 
+
+
+typedef struct VirtualDevice {
+    int sockfd;
+    int devfd;
+    struct uinput_setup dev_setup;
+    char name[64];
+} VirtualDevice;
+
+typedef struct ListenerArgs {
+    int sockfd;
+    int num_devices;
+    VirtualDevice devices[MAX_DEVICES];
+    pthread_mutex_t* mutex;
+    int* connection;
+} ListenerArgs;
+
+
+typedef struct InputPacket {
+    int dev_id; // index of the device in the listener device array
+    struct input_event ie;
+} InputPacket;
+
+#define MAX_CONNECTIONS 8
+
 typedef struct Server {
     int socket; // the server's socket's file descriptor
-    int num_conns;
     int opt;
     int server_port;
     struct sockaddr_in address;
@@ -49,16 +72,25 @@ typedef struct Server {
 
     // SHARED STUFF
     Config* config;
-    
+
     // sender
     int* sending;
     pthread_t sender_handle;
     pthread_mutex_t* sender_mutex; 
 
     // listener
-    //int* listeners;
+    // Manage sender connections to the listener
+    int num_conns;
+    
+    pthread_mutex_t* listener_mutex;
+    pthread_t listener_handle[MAX_CONNECTIONS];
+    int connections[MAX_CONNECTIONS]; // list of sockets to be listened from
+    
 
 } Server;
+
+VirtualDevice create_device(int sockfd, const char* name);
+void destroy_device(VirtualDevice dev);
 
 int start_server(Server* server, int port);
 int run_server(Server* server);
@@ -81,11 +113,4 @@ typedef struct SenderArgs {
 } SenderArgs;
 
 void* spawn_sender_thread(void* config);
-
-typedef struct ListenerArgs {
-    Config* config;
-    int* sending;
-    pthread_mutex_t* mutex;
-} ListenerArgs;
-
 void* spawn_listener_thread(void* config);

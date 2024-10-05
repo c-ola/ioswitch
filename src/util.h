@@ -11,4 +11,4 @@
 char *get_ip_str(const struct sockaddr *sa, char *s, size_t maxlen);
 
 int connect_to_server(int fd, const char *ip, unsigned int port);
-int send_input_event(struct pollfd* devfd, int dest_sock_fd);
+int send_input_event(int id, struct pollfd* devfd, int dest_sock_fd);
