@@ -27,10 +27,10 @@
       "-O1",
       "-o",
       "build/ioswitchd",
-      "src/client.c"
+      "src/tokenizer/tokenizer.c"
     ],
     "directory": "/home/nikola/programming/ioswitch",
-    "file": "/home/nikola/programming/ioswitch/src/client.c",
+    "file": "/home/nikola/programming/ioswitch/src/tokenizer/tokenizer.c",
     "output": "/home/nikola/programming/ioswitch/build/ioswitchd"
   },
   {
@@ -61,44 +61,10 @@
       "-O1",
       "-o",
       "build/ioswitchd",
-      "src/ctl.c"
+      "src/util.c"
     ],
     "directory": "/home/nikola/programming/ioswitch",
-    "file": "/home/nikola/programming/ioswitch/src/ctl.c",
-    "output": "/home/nikola/programming/ioswitch/build/ioswitchd"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-c",
-      "-g",
-      "-Wall",
-      "-fsanitize=address",
-      "-fno-omit-frame-pointer",
-      "-O1",
-      "-o",
-      "build/ioswitchd",
-      "src/common.c"
-    ],
-    "directory": "/home/nikola/programming/ioswitch",
-    "file": "/home/nikola/programming/ioswitch/src/common.c",
-    "output": "/home/nikola/programming/ioswitch/build/ioswitchd"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-c",
-      "-g",
-      "-Wall",
-      "-fsanitize=address",
-      "-fno-omit-frame-pointer",
-      "-O1",
-      "-o",
-      "build/ioswitchd",
-      "src/tokenizer/tokenizer.c"
-    ],
-    "directory": "/home/nikola/programming/ioswitch",
-    "file": "/home/nikola/programming/ioswitch/src/tokenizer/tokenizer.c",
+    "file": "/home/nikola/programming/ioswitch/src/util.c",
     "output": "/home/nikola/programming/ioswitch/build/ioswitchd"
   },
   {
@@ -129,61 +95,44 @@
       "-O1",
       "-o",
       "build/ioswitchctl",
-      "src/client.c"
-    ],
-    "directory": "/home/nikola/programming/ioswitch",
-    "file": "/home/nikola/programming/ioswitch/src/client.c",
-    "output": "/home/nikola/programming/ioswitch/build/ioswitchctl"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-c",
-      "-g",
-      "-Wall",
-      "-fsanitize=address",
-      "-fno-omit-frame-pointer",
-      "-O1",
-      "-o",
-      "build/ioswitchctl",
-      "src/ctl.c"
-    ],
-    "directory": "/home/nikola/programming/ioswitch",
-    "file": "/home/nikola/programming/ioswitch/src/ctl.c",
-    "output": "/home/nikola/programming/ioswitch/build/ioswitchctl"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-c",
-      "-g",
-      "-Wall",
-      "-fsanitize=address",
-      "-fno-omit-frame-pointer",
-      "-O1",
-      "-o",
-      "build/ioswitchctl",
-      "src/common.c"
-    ],
-    "directory": "/home/nikola/programming/ioswitch",
-    "file": "/home/nikola/programming/ioswitch/src/common.c",
-    "output": "/home/nikola/programming/ioswitch/build/ioswitchctl"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-c",
-      "-g",
-      "-Wall",
-      "-fsanitize=address",
-      "-fno-omit-frame-pointer",
-      "-O1",
-      "-o",
-      "build/ioswitchctl",
       "src/tokenizer/tokenizer.c"
     ],
     "directory": "/home/nikola/programming/ioswitch",
     "file": "/home/nikola/programming/ioswitch/src/tokenizer/tokenizer.c",
+    "output": "/home/nikola/programming/ioswitch/build/ioswitchctl"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-Wall",
+      "-fsanitize=address",
+      "-fno-omit-frame-pointer",
+      "-O1",
+      "-o",
+      "build/ioswitchctl",
+      "src/server.c"
+    ],
+    "directory": "/home/nikola/programming/ioswitch",
+    "file": "/home/nikola/programming/ioswitch/src/server.c",
+    "output": "/home/nikola/programming/ioswitch/build/ioswitchctl"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-Wall",
+      "-fsanitize=address",
+      "-fno-omit-frame-pointer",
+      "-O1",
+      "-o",
+      "build/ioswitchctl",
+      "src/util.c"
+    ],
+    "directory": "/home/nikola/programming/ioswitch",
+    "file": "/home/nikola/programming/ioswitch/src/util.c",
     "output": "/home/nikola/programming/ioswitch/build/ioswitchctl"
   }
 ]

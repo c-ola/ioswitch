@@ -14,8 +14,8 @@ else
 	FLAGS := $(FLAGS) -fsanitize=address -fno-omit-frame-pointer -O1
 endif
 
-DAEMON_SRC_FILES = src/client.c src/server.c src/ctl.c src/common.c src/tokenizer/tokenizer.c
-CTL_SRC_FILES = src/client.c src/ctl.c src/common.c src/tokenizer/tokenizer.c
+DAEMON_SRC_FILES = src/tokenizer/tokenizer.c src/server.c src/util.c
+CTL_SRC_FILES = src/tokenizer/tokenizer.c src/server.c src/util.c
 
 all: daemon ctl
 

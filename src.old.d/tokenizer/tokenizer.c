@@ -13,14 +13,10 @@ void print_token(Token tok) {
 
 Tokenizer load_tokens(const char* file_name) {
     Tokenizer tz = { 0 };
-    printf("config file %s\n", file_name);
-
+    printf("%s\n", file_name);
+    
     FILE* file = fopen(file_name, "r");
-    if (file == NULL) {
-        perror("Could load config");
-        return tz;
-    }
-
+    
     char line[MAX_LINE_WIDTH];
     int idx = 0;
     int tok_start = 0;
@@ -116,20 +112,15 @@ Values* get_variable(Tokenizer t, const char* var) {
             }
         }
     }
-    if (values->num_values == 0) {
-        free(values);
-        return NULL;
-    }
     return values;
 };
 
-#ifdef TOKENIZER_MAIN
-int main() {
+
+/*int main() {
     Tokenizer tz = load_tokens("./config");
     Values* values = get_variable(tz, "ip");
     free(values);
     values = get_variable(tz, "key_binds");
     free(values);
     return 0;
-}
-#endif
+}*/

@@ -1,9 +1,8 @@
-ip=192.168.2.37
-target_port=8080
-local_port=8080
+dest_ip=127.0.0.1
+dest_port=16307
 key_binds={ LEFTMETA, LEFTSHIFT, DOT, }
 devices={
     /dev/input/event9,
-    /dev/input/event10
+    /dev/input/event10,
 }
 

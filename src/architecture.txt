@@ -1,0 +1,14 @@
+Commands
+    - list
+    - start # starts sending devices defined in the config
+    - stop # stops sending all devices
+    - switch # toggles between start and stop
+    - reload
+    - kill
+
+OPTION TO RELOAD CONFIG ON START AND STOP
+
+Daemon
+    - message thread
+    - listener thread
+    - need thread that dispatches senders
