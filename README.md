@@ -4,6 +4,7 @@ Sends input from one computer to another via a TCP server (i.e. send desktop mou
 Based alot of the screen locking code off of xtrlock http://ftp.debian.org/debian/pool/main/x/xtrlock/.
 
 The daemon is capable of both sending and receiving inputs. It is controlled through the command line.
+
 Available/Planned features are:
 - [ ] list devices (sent/received)
 - [x] start sending
@@ -30,7 +31,9 @@ It might make sense for me to add an emergency exit on the screen locker.
 
 #### Daemon
 There are a couple of options for running the daemon.
+
 Note: You have to run the daemon on two devices to make it work.
+
 One is the receiver, which will copy input sent to it. The other is the sender, which sends input from devices on that host.
 
 1. Add yourself to the `input` group with `sudo usermod -a -G input $USER`. Then you can run it with some sort of startup script using `ioswitchd` (for example, the i3 config)
@@ -63,7 +66,9 @@ At the moment, the keybind to unlock is meta+Ctrl+period, which is hardcoded int
 
 ### Configuration
 Format for the config file is the following.
+
 `variable=value`
+
 Also supports lists.
 ```
 variable={
@@ -87,9 +92,10 @@ daemon_port  # the port of the daemon that the ctl connects to
 device  # list of devices that the daemon will send will told to
 ```
 
-### Issues ¯\_(ツ)_/¯
+### Issues ¯\\_(ツ)_/¯
 Probably so many i'm not aware of, there's definitely a chance the daemon just crashes.
+
 Known ones are:
-    - last input event gets cut off before EV_SYN when stopping sending, fix is to send an extra EV_SYN
-    - lock bind requires 2 presses
-    - you sometimes get locked in (I just have lock in with this program tbh)
+- last input event gets cut off before EV_SYN when stopping sending, fix is to send an extra EV_SYN
+- lock bind requires 2 presses
+- you sometimes get locked in (I just have lock in with this program tbh)
