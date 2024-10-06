@@ -5,6 +5,8 @@
 
 int main(int argc, char* argv[]) {
     char config_path[256];
+    strcat(strcpy(config_path, getenv("HOME")), "/.config/ioswitch/config");
+
     int opt;
     opterr = 0;
     while ((opt = getopt(argc, argv, ":c:")) != -1) {

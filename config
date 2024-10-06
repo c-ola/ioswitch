@@ -1,8 +1,10 @@
-dest_ip=127.0.0.1
+dest_ip=192.168.2.44
 dest_port=16307
-key_binds={ LEFTMETA, LEFTSHIFT, DOT, }
+daemon_ip=127.0.0.1
+daemon_port=16307
+source_port=16307
 devices={
+    /dev/input/by-id/usb-Keychron_Keychron_K6-event-kbd,
     /dev/input/event9,
-    /dev/input/event10,
 }
 

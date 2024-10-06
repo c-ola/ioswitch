@@ -64,7 +64,6 @@ int send_command(CtlConfig config) {
         perror("Socket creation error");
         return -1;
     }
-
     // The daemon you're sending the command to
     struct sockaddr_in daemon_addr;
     daemon_addr.sin_family = AF_INET;
@@ -125,9 +124,6 @@ int main(int argc, char **argv) {
     opterr = 0;
     while ((opt = getopt(argc, argv, ":t:i:d:p:l:c:n:")) != -1) {
         switch (opt) {
-            case 's':
-                config.source_port = atoi(optarg);
-                break;
             case 'd':
                 config.daemon_port = atoi(optarg);
                 break;

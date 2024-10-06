@@ -12,6 +12,11 @@
 #include "commands.h"
 #include "tokenizer/tokenizer.h"
 #include "util.h"
+#include <X11/X.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/keysym.h>
+#include <X11/Xos.h>
 
 Server* create_server(const char* config_path){
     Server* server = malloc(sizeof(Server));
@@ -57,15 +62,15 @@ int start_server(Server* server, int port) {
         return -1;
     }
     server->address.sin_family = AF_INET;
-    //server->address.sin_addr.s_addr = htons(INADDR_ANY);
+    server->address.sin_addr.s_addr = htons(INADDR_ANY);
     server->address.sin_port = htons(port);
     server->addrlen = sizeof(struct sockaddr_in);
 
     // Convert IPv4 and IPv6 addresses from text to binary form
-    if (inet_pton(AF_INET, "127.0.0.1", &server->address.sin_addr) <= 0) {
+    /*if (inet_pton(AF_INET, "127.0.0.1", &server->address.sin_addr) <= 0) {
         perror("Invalid address/ Address not supported");
         return -1;
-    }
+    }*/
 
     if (bind(server->socket, (struct sockaddr *)&server->address, server->addrlen) < 0) {
         perror("binding to port failed");
@@ -316,6 +321,7 @@ void* spawn_sender_thread(void* args) {
         .type = INPUT_STREAM,
         .num_devices = config->num_devices
     };
+
     pthread_mutex_lock(mutex);
     struct pollfd* device_fds = malloc(sizeof(struct pollfd)*config->num_devices);
     for(int i = 0; i < config->num_devices; i++) {
@@ -338,17 +344,22 @@ void* spawn_sender_thread(void* args) {
         pthread_exit(NULL);
     }
 
+    // once connected, lock the screen
+    pthread_t lock_handle;
+    pthread_create(&lock_handle, NULL, &spawn_lock_thread, NULL);
+    pthread_detach(lock_handle);
+
     int connected = 1;
     while (connected) {
         pthread_mutex_lock(mutex);
         int k = config->num_devices;
         pthread_mutex_unlock(mutex);
-        for(int i = 0; i < k; i++) {
-            if (send_input_event(i, &device_fds[i], fd) < 0) {
-                fprintf(stderr, "Failed sending input event\n");
-                connected = 0;
-            }
+
+        if (send_input_event(k, device_fds, fd) < 0) {
+            fprintf(stderr, "Failed sending input event\n");
+            connected = 0;
         }
+
         pthread_mutex_lock(mutex);
         if (!(*sending)) {
             connected = 0;
@@ -356,6 +367,8 @@ void* spawn_sender_thread(void* args) {
         pthread_mutex_unlock(mutex);
     }
     printf("Stopped Sending\n");
+
+    pthread_join(lock_handle, NULL);
 
     free(args);
     free(device_fds);
@@ -373,7 +386,7 @@ void* spawn_listener_thread(void* listener_args) {
         ssize_t read_bytes = read(args->sockfd, &packet, sizeof(InputPacket));
         VirtualDevice device = devices[packet.dev_id];
         if (read_bytes == sizeof(InputPacket)) {
-            printf("device %d, %s\n", packet.dev_id, device.name);
+            //printf("device %d, %s\n", packet.dev_id, device.name);
             write(device.devfd, &packet.ie, sizeof(struct input_event));
         } else if (read_bytes <= 0) {
             printf("Listener: Disconnected\n");

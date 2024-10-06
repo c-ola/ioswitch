@@ -9,7 +9,7 @@ Environment=XAUTHORITY=/home/nikola/.Xauthority
 Type=simple
 Restart=no
 User=nikola
-ExecStart=/usr/bin/env /usr/local/bin/ioswitchd -p 8080
+ExecStart=/usr/bin/env /usr/local/bin/ioswitchd
 
 [Install]
 WantedBy=multi-user.target

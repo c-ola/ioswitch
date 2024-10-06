@@ -1,7 +1,0 @@
-#!/bin/bash
-xid=(11 12 13 16)
-ioswitchctl -t add
-for i in ${xid[@]}; do
-    echo "device id: $i"
-    xinput disable ${i}
-done

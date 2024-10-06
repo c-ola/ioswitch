@@ -44,7 +44,7 @@ int send_input_event(Sender* sender) {
     // timeout should probably be a couple of milliseconds to not block everything
     struct input_event ie = { 0 };
 
-    int ret = poll(&sender->devfd, 1, -1);
+    int ret = poll(&sender->devfd, 1, 100);
     if (ret < 0) {
         printf("timeout\n");
         return -1;
