@@ -5,16 +5,16 @@ Based alot of the screen locking code off of xtrlock http://ftp.debian.org/debia
 
 The daemon is capable of both sending and receiving inputs. It is controlled through the command line.
 Available/Planned features are:
-- [] list devices (sent/received)
+- [ ] list devices (sent/received)
 - [x] start sending
 - [x] stop sending
 - [x] switch start/stop sending state
 - [x] kill the daemon
 - [x] lock the user input on the computer that is sending
-- [] hot reload the config without rerunning the daemon
-- [] better input device selection (i.e. select device through just a name, and some kind of script just finds the device path in /dev/input)
-- [] multiple destinations to send to in one file config, choose what to send in a command
-- [] status command, returns if its sending or not
+- [ ] hot reload the config without rerunning the daemon
+- [ ] better input device selection (i.e. select device through just a name, and some kind of script just finds the device path in /dev/input)
+- [ ] multiple destinations to send to in one file config, choose what to send in a command
+- [ ] status command, returns if its sending or not
 
 Planned
 
